@@ -392,9 +392,6 @@ is persisted), but must be done before the first write to disk.
 ## 13. Open questions
 
 - **Name** for the app (product name; the code name `StudyDiary` is settled — §11.1).
-- **Open-source license.** MIT (permissive, the .NET/Avalonia norm) vs GPLv3 (copyleft, arguably
-  more on-brand for a user-freedom, local-first, no-telemetry app). Needs deciding — the repo is
-  already public.
 - "Keep going" beyond the cap: should the user be able to **choose what to continue with**
   (by subject / tag / content type)?
 - Whether Notes should ever allow a pure re-read mode (currently: recall-first default).
@@ -463,3 +460,13 @@ is persisted), but must be done before the first write to disk.
 - **Box-number ↔ index translation lives on `LeitnerLadder.IntervalForBox(box)`**, not in the
   scheduler. Boxes are 1-based, the array is 0-indexed; box numbering is the ladder's own
   concept, so the scheduler never writes `- 1`, and range validation gets a natural home.
+- **License: GPLv3-or-later (decided).** Commercial use and selling are fine; what is not
+  fine is someone forking this into spyware, adware or engagement-farming and shipping it
+  closed. No OSI-approved licence can forbid a *use* (the Open Source Definition bars
+  field-of-endeavour restrictions), and ethical-source licences are legally untested and
+  not open source. Copyleft is the closest available fit: it doesn't prohibit bad behaviour,
+  but it forces anyone distributing a modified version to publish the source — so
+  user-hostile additions can't be made quietly. Losing companies who won't touch copyleft
+  is not a cost here: the audience is individual learners, not vendors building products on
+  top. "or later" so future FSF revisions can be adopted without tracking down every
+  contributor.
