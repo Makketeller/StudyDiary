@@ -1,8 +1,9 @@
 # Study Diary — Design Notes
 
 > Working name: TBD. Open-source, local-first study diary with spaced-repetition review.
+> Repo: https://github.com/Makketeller/StudyDiary — internal/code name **StudyDiary** (§11.1).
 > This document is the source of truth for **product decisions**. It is meant to be edited
-> as decisions change. Rationale is included where a future reader (or future us) might
+> as decisions change. Rationale is included where a future reader (or future me) might
 > otherwise re-litigate a settled choice.
 
 ---
@@ -23,6 +24,9 @@ file-copy backup.
 - Data portability: human-readable export; backup is "copy this file"; restore is one click (§7).
 - Longevity over cleverness. Favor the .NET standard library and low-maintenance choices;
   every heavy dependency must justify itself against long-term maintenance cost.
+- **Cross-platform: Windows, macOS, and Linux are all release targets.** Development happens
+  on Fedora (Linux), but that is a dev-machine fact, not a scope narrowing. See §11.3 for the
+  packaging consequences.
 
 ---
 
@@ -57,7 +61,8 @@ active-recall by default, because the stated goal is to actually learn.
 ## 3. Scheduling — spaced repetition (classic Leitner)
 
 Deterministic: two people applying these rules to the same history compute the same next
-review date.
+review date. (This is enforced structurally — see §11.4 on the scheduler never reading the
+system clock.)
 
 ### Box ladder
 
@@ -76,7 +81,11 @@ review date.
   - Writing the entry into the app *is* the first exposure, so there is no separate
     "review me now" state. (This is why there is no box 0.)
 - **Pass** → box `min(N + 1, 5)`. Next review = **actual review date** + new box's waiting time.
-- **Fail** → box **1**. Next review = **actual review date** + 1 day.
+- **Fail** → box **1**. Next review = **actual review date** + box 1's waiting time.
+  - *Clarification:* earlier wording said "+ 1 day". That is numerically the same thing today,
+    because box 1's interval *is* 1 day. The implementation must **look up box 1's interval**
+    rather than hardcode a day, so that changing the ladder can never leave the fail path
+    silently disagreeing with the table above. The ladder is the single source of truth.
 - **Cap (box 5)** repeats at 1 year forever. **No auto-retire** — you keep things you learned
   years ago from silently rotting. A manual **archive** action exists for deliberate removal
   from rotation.
@@ -95,13 +104,22 @@ Scheduling uses **whole-day dates**, not timestamps. An item due "today" is due 
 This sidesteps most timezone/clock complexity. (Timestamps may still exist on entries for
 diary/browsing purposes; they just don't drive scheduling.)
 
+This is enforced in the type system: scheduling code uses `DateOnly`, which has no
+time-of-day and no timezone component, so there is no clock available to accidentally
+depend on. See §11.4.
+
 ### Implementation stance
 
 The ladder is **data, not code**: a small config object (`initial delay` + ordered list of
 intervals), never hardcoded `if box == 2` branches. Consequences:
-- Adding/removing a box (as we just did, 1y → +6m) is a one-line change.
+- Adding/removing a box is a one-line change.
 - The whole scheduler sits behind an interface so a future FSRS/SM-2 experiment is a swap,
   not a rewrite. FSRS/SM-2 are **deferred**; pure Leitner is the MVP.
+
+Concrete shape (see §11.4): a `LeitnerLadder` value holding an `InitialDelay` and an ordered
+list of per-box intervals, each interval being a `(count, unit)` pair where unit is
+day/month/year. Box numbers are **1-based**; the list is 0-indexed. That translation
+lives in exactly one place (the ladder) and must not be duplicated.
 
 ---
 
@@ -122,13 +140,15 @@ Two distinct mechanisms — kept separate on purpose.
 
 **Important separation:** all of the above is a *serving* concern — how items are handed out of
 the ready pool. It does **not** touch scheduling or the definition of "ready", so it cannot
-corrupt spacing. It is pure UI/session logic.
+corrupt spacing. It is pure UI/session logic and lives in the UI layer, not the domain.
 
 ### Free practice / drill (catch-up mode)
 - Reviewing items that are **not** ready yet, for extra reps, because you feel like it.
 - **Free practice does NOT move boxes and does NOT reschedule anything.** It is pure bonus
   study that leaves the real schedule untouched. This is what stops "extra practice" from
   silently corrupting the spacing.
+- Architecturally this is enforced by *absence*: free practice simply does not call the
+  scheduler. There is no "practice mode" flag inside the scheduler that could be got wrong.
 
 ---
 
@@ -235,16 +255,114 @@ Backup must be trivial and restore must be *even easier* — this is an explicit
 
 ---
 
-## 11. Tech stack (tentative — verify before locking)
+## 11. Tech stack & code conventions
 
-- **C# / .NET**, **Avalonia UI**, **SQLite**. Cross-platform installers for non-technical users.
-- Not locked in. Challenge every heavy dependency against the standard library and long-term
-  maintenance cost.
-- **Verify current tooling** (`learn.microsoft.com`, `avaloniaui.net`) for SDK version,
-  project templates, and packaging/installer steps at scaffold time — do not trust stale
-  training data on versions.
+### 11.1 Stack (verified and locked, 2026-07)
 
-### Telemetry (checked, 2026-07)
+- **.NET 10** — current LTS at time of scaffolding (SDK 10.0.1xx), supported to **Nov 2028**.
+  LTS chosen deliberately for the "longevity over cleverness" principle: three years of
+  patches, no forced churn.
+- **Avalonia 12** — current major (templates package `Avalonia.Templates` 12.1.0).
+  Note: Avalonia 12 has breaking changes vs 11; **ignore Avalonia-11-era tutorials.**
+- **SQLite** — planned for persistence; not yet implemented. Revisit the access approach
+  (raw `Microsoft.Data.Sqlite` vs an ORM) against the dependency-cost rule when §7/§8 schema
+  work begins.
+- **Solution format: `.slnx`** — the newer XML solution format, default in .NET 10.
+  Some tooling still expects the older `.sln`; if a tool can't find the projects, this is a
+  prime suspect.
+- **Internal/code name: `StudyDiary`** — used for the solution, projects, and namespace root.
+  The *product* name is still open (§13). These are deliberately allowed to differ, because
+  renaming namespaces later is tedious and renaming a product is not.
+
+Not locked forever: challenge every heavy dependency against the standard library and
+long-term maintenance cost. But the four items above are settled; don't re-litigate without
+a reason.
+
+### 11.2 Project layout
+
+Separation of concerns is enforced by the **compiler**, not by discipline: a project can only
+reference what it explicitly declares, so `StudyDiary.Domain` having no reference to Avalonia
+or SQLite makes it *physically incapable* of depending on them.
+
+```
+StudyDiary.slnx
+├── src/
+│   ├── StudyDiary.Domain      class library — Entry, DayLog, scheduler. No UI, no DB.
+│   ├── StudyDiary.App         Avalonia shell.        → references Domain
+│   └── StudyDiary.Data        (NOT YET CREATED) SQLite, JSON export, backup. → references Domain
+└── tests/
+    └── StudyDiary.Domain.Tests  xUnit.               → references Domain
+```
+
+**Dependencies point inward, toward Domain, always.** Domain references nothing of ours.
+`StudyDiary.Data` will be scaffolded when persistence work actually starts — no empty layers
+ahead of need.
+
+### 11.3 Development environment & cross-platform release
+
+**Dev machine: Fedora (Linux).** Local commands in notes assume `dnf` and Linux paths.
+
+**Editor: VS Code + the official Microsoft C# extension.**
+- VSCodium was tried first and **does not work** for C#: Microsoft's C# extension and C# Dev Kit
+  are licensed only for official VS Code builds and are not published to Open VSX. Without a
+  language server there is no IntelliSense, no hover docs, and no live diagnostics.
+  Third-party options exist (SharpLsp — MIT, promising but 0.x/alpha as of 2026-07; community
+  forks of the MS extension; the official `roslyn-language-server` wired up by hand). Recorded
+  here so future-us doesn't repeat the search.
+- **C# extension only — not C# Dev Kit.** Dev Kit carries VS-Community-style license terms,
+  expects a Microsoft sign-in, and bundles IntelliCode AI completion. None of that is needed;
+  the C# extension alone provides the Roslyn language server and debugger.
+- VS Code telemetry is set to `off` (`telemetry.telemetryLevel`). Unlike Rider's free
+  non-commercial license, which cannot opt out of usage statistics, VS Code's is switchable.
+- **This has zero bearing on the no-telemetry promise to users** (see 11.5) — editor and SDK
+  telemetry are developer-side only and are never embedded in the shipped app.
+
+**Release targets: Windows, macOS, Linux.** The app code is fully cross-platform from one
+codebase; nothing platform-specific exists in Domain. The catch is **packaging**: .NET
+cross-compiles the app fine, but native installers generally must be built on their target OS
+(a macOS `.dmg`/`.pkg` also needs Apple notarization, which requires a Mac). Expected approach:
+**GitHub Actions with a matrix of OS runners**, each building its own installer. Linux first,
+since that's the dev machine. This is post-MVP work (§12).
+
+### 11.4 Domain code conventions
+
+These follow from decisions above; they exist so the invariants are enforced by types rather
+than by remembering.
+
+**Whole-day dates use `DateOnly`, never `DateTime`.** §3 says scheduling is whole-day; using a
+type with no time-of-day and no timezone makes that structurally true instead of a comment
+someone can violate.
+
+**The scheduler never reads the clock.** "Today" and "the actual review date" arrive as
+*parameters*. A method that calls `DateTime.Now` internally can only be tested by changing the
+system clock; a method that takes a date can be tested for any date, instantly. This is what
+makes §3's determinism claim literally checkable.
+
+**Value objects are `record`; entities are `class`.** The test is: *is this thing defined by
+its contents, or by its identity?*
+- **`record`** — interchangeable data. Two instances with equal contents *are* the same thing.
+  → `ReviewInterval`, `LeitnerLadder`, `ReviewState`.
+- **`class`** — has an identity that persists while contents change. Two entries with identical
+  text are **different entries**; editing an entry's text leaves it the same entry.
+  → `Entry`, `DayLog`, `Profile`.
+
+Getting this backwards is a real bug, not a style preference: a record-typed `Entry` would
+report two distinct entries as equal whenever their text matched, and they would collide in
+sets and dictionaries.
+
+**Domain values are immutable; state transitions produce new values.** A review does not mutate
+an entry's state — it returns a new `ReviewState` (C# `with` expressions make this cheap). This
+is why free practice (§4) *cannot* corrupt the schedule: there is nothing to mutate.
+
+**The scheduler sits behind an interface** (`IReviewScheduler`), testable with no UI and no DB,
+so FSRS/SM-2 (§12) is a swap rather than a rewrite.
+
+**Enums that get persisted must have explicitly pinned integer values.** An enum is an int
+underneath; if members are reordered after values are stored in SQLite, every saved row
+silently changes meaning. Cheap insurance for a 5-year-lifespan app. Not yet needed (nothing
+is persisted), but must be done before the first write to disk.
+
+### 11.5 Telemetry (checked, 2026-07)
 - **No telemetry ships in the app.** A compiled .NET app does not phone home; there is no
   runtime telemetry baked in. End users and their diaries are never touched.
 - The only .NET telemetry is **developer-side**: the SDK/CLI (`dotnet build`/`run`, and the newer
@@ -254,11 +372,8 @@ Backup must be trivial and restore must be *even easier* — this is an explicit
   `TESTINGPLATFORM_TELEMETRY_OPTOUT=1` for the test platform). This is optional hygiene; it has
   zero bearing on the "no telemetry" promise to users, which the ship-nothing-that-phones-home
   architecture already guarantees.
-
-### Separation of concerns (to be enforced)
-- **I/O** (SQLite persistence, file backup, JSON export) ‖ **domain logic** (Entry model,
-  DayLog, scheduler) ‖ **UI** (Avalonia views) are separate and depend inward, not outward.
-- The **scheduler** lives behind an interface, testable in isolation with no UI or DB.
+- The same reasoning covers editor choice and any future website funding model: what matters is
+  what the **shipped binary** does.
 
 ---
 
@@ -270,17 +385,24 @@ Backup must be trivial and restore must be *even easier* — this is an explicit
 - **Sync / merge** of divergent review histories across machines (conflict resolution).
 - **Encryption-at-rest + optional per-profile password** (diary privacy on a shared machine).
 - Extra ladder steps if the retention curve wants them (trivial — ladder is data).
+- **Packaging & installers** for all three platforms, via CI matrix runners (§11.3).
 
 ---
 
 ## 13. Open questions
 
-- **Name** for the app.
+- **Name** for the app (product name; the code name `StudyDiary` is settled — §11.1).
+- **Open-source license.** MIT (permissive, the .NET/Avalonia norm) vs GPLv3 (copyleft, arguably
+  more on-brand for a user-freedom, local-first, no-telemetry app). Needs deciding — the repo is
+  already public.
 - "Keep going" beyond the cap: should the user be able to **choose what to continue with**
-  (by subject / tag / content type)? Depends on an organization/tagging design we haven't done.
+  (by subject / tag / content type)?
 - Whether Notes should ever allow a pure re-read mode (currently: recall-first default).
 - Exact import UX when profiles exist (new profile vs restore-into-current).
 - Schema specifics (next design step after architecture is agreed).
+- **Validation of interval values.** `Count > 0` is *not* a uniform rule: §3 explicitly allows an
+  `initial delay` of 0, while a zero-length *box* interval would be a bug. Decide when the
+  settings UI that lets a user set the delay actually exists.
 
 ---
 
@@ -291,14 +413,18 @@ Backup must be trivial and restore must be *even easier* — this is an explicit
   state; surfaced read-only via a toggle during review of that day's entries.
 - Content type & review shape have **zero** effect on scheduling.
 - Review is **active-recall by default**; capture/browse is **diary-like**.
-- Scheduler = **classic Leitner**, binary pass/fail, ladder **1d / 1w / 1m / 6m / 1y**,
+- Scheduler = **classic Leitner**, binary pass/fail, ladder **1d / 7d / 1m / 6m / 1y**,
   cap repeats forever, no auto-retire, manual archive.
 - Next review anchored to **actual review date**, not scheduled date.
 - **No box 0**; new entries enter box 1 with a settable `initial delay` (default 1 day).
+- Fail path looks up **box 1's interval** rather than hardcoding "1 day", so the ladder stays
+  the single source of truth.
 - Ladder is **data**, scheduler behind an **interface** (FSRS-ready).
-- Whole-day date arithmetic for scheduling.
+- Whole-day date arithmetic for scheduling, enforced via **`DateOnly`**.
+- Scheduler **takes dates as parameters and never reads the system clock** — determinism and
+  testability.
 - **No toxic debt**: "ready", never "due/overdue"; capped batches; free-practice never
-  reschedules.
+  reschedules (enforced by *not calling* the scheduler, not by a flag).
 - **Session cap = 10**, foot-in-the-door first batch (~2) when behind; serving is UI-only and
   never touches scheduling.
 - **Local profiles** (video-game/Netflix model), default profile, no passwords in MVP,
@@ -308,6 +434,32 @@ Backup must be trivial and restore must be *even easier* — this is an explicit
 - **Diary privacy (decided):** MVP is local-only baseline (nothing leaves the machine);
   encryption-at-rest **deferred**, schema to stay encryption-ready.
 - **No shipped telemetry** (checked): .NET telemetry is developer-side SDK/CLI only, opt-out via
-  `DOTNET_CLI_TELEMETRY_OPTOUT`; nothing is baked into the app.
+  `DOTNET_CLI_TELEMETRY_OPTOUT`; nothing is baked into the app. Editor choice and any website
+  funding model are likewise developer-side and don't touch the promise.
 - MVP content: **text + images + LaTeX-with-live-preview + insertion-palette cheat sheet**.
-- Deferred: visual math editor, inline PDF, FSRS, sync/merge, diary encryption + profile passwords.
+- Deferred: visual math editor, inline PDF, FSRS, sync/merge, diary encryption + profile passwords,
+  cross-platform packaging/CI.
+- **Stack locked (2026-07):** .NET 10 (LTS), Avalonia 12, SQLite planned, `.slnx` solution,
+  code name `StudyDiary`.
+- **Project layout:** `src/Domain` + `src/App` + `tests/Domain.Tests`, dependencies pointing
+  inward; `src/Data` deferred until persistence work starts.
+- **Dev env:** Fedora + VS Code + official C# extension (not Dev Kit). VSCodium rejected for
+  lack of a working C# language server.
+- **Release targets: Windows, macOS, Linux**; installers built per-OS via CI matrix (post-MVP).
+- **Value objects are `record`, entities are `class`** — contents-identity vs persistent-identity.
+- Domain values immutable; transitions return new values (`with`).
+- Persisted enums must have **explicitly pinned integer values** before anything is written to disk.
+- **No `Week` interval unit.** A week is exactly 7 days with no calendar subtlety, so
+  `(1, Week)` and `(7, Day)` behave identically but compare **unequal** under record
+  value-equality — two encodings of one value, which leaks into tests, settings comparison
+  and any future serialization. `Month`/`Year` genuinely cannot be reduced to days (the
+  conversion depends on the date), so they stay. Box 2 is `(7, Day)`; rendering that as
+  "1 week" is a UI formatting concern, not a domain one.
+- **Ladder intervals are `ImmutableArray`, not `IReadOnlyList`.** `LeitnerLadder.Default` is
+  a single shared static instance; `IReadOnlyList` is only a read-only *view*, so anyone
+  holding the original `List` reference could mutate the default ladder process-wide. Ships
+  in the BCL — no new dependency. (Note: `.Length`, not `.Count`; and `default` of an
+  `ImmutableArray` wraps a null array that throws on first use.)
+- **Box-number ↔ index translation lives on `LeitnerLadder.IntervalForBox(box)`**, not in the
+  scheduler. Boxes are 1-based, the array is 0-indexed; box numbering is the ladder's own
+  concept, so the scheduler never writes `- 1`, and range validation gets a natural home.
