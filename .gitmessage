@@ -1,0 +1,8 @@
+# type(scope): imperative summary, ~50 chars, no full stop
+#
+# Body: wrap at 72. Explain WHY, not what — the diff shows what.
+#
+# type:  feat fix docs refactor test chore build
+# scope: domain app data tests scheduler design  (optional)
+#
+# Summary completes: "If applied, this commit will ___"
