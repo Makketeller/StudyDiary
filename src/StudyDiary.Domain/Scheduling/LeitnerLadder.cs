@@ -11,25 +11,21 @@ using System.Collections.Immutable;
 namespace StudyDiary.Domain.Scheduling;
 
 /// <summary>
-/// The Leitner ladder as *data* (DESIGN.md §3): an initial delay plus one
-/// interval per box. Reshaping a box is an edit to this list — never an
+/// The Leitner ladder as *data* (DESIGN.md §3): one interval per box.
+/// Reshaping a box is an edit to this list — never an
 /// `if (box == 2)` branch in the scheduler.
 /// </summary>
-public sealed record LeitnerLadder(
-    ReviewInterval InitialDelay,
-    ImmutableArray<ReviewInterval> BoxIntervals)
+public sealed record LeitnerLadder(ImmutableArray<ReviewInterval> BoxIntervals)
 {
     /// <summary>The shipped default ladder: 1d / 7d / 1m / 6m / 1y, box 5 caps.</summary>
     public static LeitnerLadder Default { get; } = new(
-        InitialDelay: new ReviewInterval(1, IntervalUnit.Day),
-        BoxIntervals:
-        [
-            new ReviewInterval(1, IntervalUnit.Day),    // Box 1
-            new ReviewInterval(7, IntervalUnit.Day),    // Box 2
-            new ReviewInterval(1, IntervalUnit.Month),  // Box 3
-            new ReviewInterval(6, IntervalUnit.Month),  // Box 4
-            new ReviewInterval(1, IntervalUnit.Year)    // Box 5 (cap)
-        ]);
+    [
+        new ReviewInterval(1, IntervalUnit.Day),    // Box 1
+        new ReviewInterval(7, IntervalUnit.Day),    // Box 2
+        new ReviewInterval(1, IntervalUnit.Month),  // Box 3
+        new ReviewInterval(6, IntervalUnit.Month),  // Box 4
+        new ReviewInterval(1, IntervalUnit.Year)    // Box 5 (cap)
+    ]);
 
     /// <summary>Highest box number (the cap). Boxes are 1-based.</summary>
     public int MaxBox => BoxIntervals.Length;
