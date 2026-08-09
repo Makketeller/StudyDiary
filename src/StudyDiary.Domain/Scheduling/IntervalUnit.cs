@@ -11,7 +11,7 @@ namespace StudyDiary.Domain.Scheduling;
 /// <summary>The calendar unit an interval is measured in.</summary>
 public enum IntervalUnit
 {
-    Day,
-    Month,
-    Year
+    Day = 0,
+    Month = 1,
+    Year = 2
 }
