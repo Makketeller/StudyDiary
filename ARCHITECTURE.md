@@ -226,11 +226,27 @@ copy constructor, `with` invokes that, and then assigns through each property's 
 accessor. So a check written in the primary constructor body is bypassed by exactly the
 operation the paragraph above encourages —
 `LeitnerLadder.Default with { BoxIntervals = default }` produces an invalid ladder and
-throws nothing. Fix: declare the property explicitly in the record body and validate in
-its `init`. A positional record whose body already declares a member of that name does
-not get a synthesized one, and the primary constructor assigns *through* the declared
-property, so a single check covers construction and `with` alike. Any future record with
-a validated member inherits the same obligation.
+throws nothing. The fix has two halves, and the second is easy to miss. Declaring the property
+explicitly in the record body does suppress the synthesized one — but it also leaves the
+primary constructor parameter assigned to nothing, which the compiler reports as
+**CS8907** (*"Parameter 'Count' is unread"*). That is a warning, not an error: the build
+succeeds and every instance silently carries the type's default value. So the parameter
+must be read explicitly in a field initializer, and the rule then has two entry points —
+construction and `with` — which is one rule too many to write twice. Factor it into a
+private static that both call:
+
+    private readonly int _count = Validated(Count);   // primary constructor
+    public int Count
+    {
+        get => _count;
+        init => _count = Validated(value);            // with-expression
+    }
+    private static int Validated(int count) { ... }
+
+The copy constructor copies the backing field directly, which is correct — it was
+validated when first set. Any future record with a validated member inherits the same
+obligation, including a round-trip test that a constructor argument survives to its
+property. That test is the only thing that catches CS8907 becoming a silent default.
 
 ### Dates and time
 
@@ -265,7 +281,7 @@ on first use.)
 **Value objects validate on construction, and validation lives where the rule is uniform.**
 `LeitnerLadder` rejects a `default` or empty `BoxIntervals` and any interval with
 `Count <= 0`. `ReviewInterval` permits `Count >= 0`, rejecting only negatives (DESIGN §3).
-Both checks live in `init` accessors, for the reason given above.
+Both follow the two-entry-point pattern above.
 
 The split is not arbitrary. `ReviewInterval` is a general span of whole days, months or years, and
 zero is arithmetically meaningful on a span — `AddTo` simply returns the same date. Positivity is a
