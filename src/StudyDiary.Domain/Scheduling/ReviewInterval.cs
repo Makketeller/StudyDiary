@@ -15,6 +15,20 @@ namespace StudyDiary.Domain.Scheduling;
 /// </summary>
 public sealed record ReviewInterval(int Count, IntervalUnit Unit)
 {
+    private readonly int _count = Validated(Count);
+    
+    public int Count
+    {
+        get => _count;
+        init => _count = Validated(value);
+    }
+
+    private static int Validated(int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        return count;
+    }
+
     /// <summary>Advance a whole-day date by this interval.</summary>
     public DateOnly AddTo(DateOnly date) => Unit switch
     {
