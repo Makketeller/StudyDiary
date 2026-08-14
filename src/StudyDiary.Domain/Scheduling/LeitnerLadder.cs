@@ -42,4 +42,22 @@ public sealed record LeitnerLadder(ImmutableArray<ReviewInterval> BoxIntervals)
 
         return BoxIntervals[box - 1];
     }
+
+    /// <summary>
+    /// Structural equality. `ImmutableArray` compares by reference to its underlying
+    /// array, so the compiler-generated record `Equals` would report two identical
+    /// ladders as different (ARCHITECTURE).
+    /// </summary>
+    public bool Equals(LeitnerLadder? other) =>
+        other is not null && BoxIntervals.SequenceEqual(other.BoxIntervals);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        
+        foreach (var interval in BoxIntervals)
+            hash.Add(interval);
+
+        return hash.ToHashCode();
+    }
 }
