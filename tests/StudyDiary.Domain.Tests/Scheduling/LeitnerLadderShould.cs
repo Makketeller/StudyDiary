@@ -29,7 +29,7 @@ public class LeitnerLadderShould
     }
 
     [Fact]
-    public void NotEqualALadderWithReoreredIntervals()
+    public void NotEqualALadderWithReorderedIntervals()
     {
         var a = new LeitnerLadder([
             new ReviewInterval(1, IntervalUnit.Day),
