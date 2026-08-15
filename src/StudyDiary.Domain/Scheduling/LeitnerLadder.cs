@@ -16,7 +16,29 @@ namespace StudyDiary.Domain.Scheduling;
 /// `if (box == 2)` branch in the scheduler.
 /// </summary>
 public sealed record LeitnerLadder(ImmutableArray<ReviewInterval> BoxIntervals)
-{
+{   
+    private readonly ImmutableArray<ReviewInterval> _boxIntervals = Validated(BoxIntervals);
+
+    public ImmutableArray<ReviewInterval> BoxIntervals
+    {
+        get => _boxIntervals;
+        init => _boxIntervals = Validated(value);
+    }
+
+    private static ImmutableArray<ReviewInterval> Validated(
+        ImmutableArray<ReviewInterval> boxIntervals)
+    {
+        if (boxIntervals.IsDefaultOrEmpty)
+            throw new ArgumentException(
+                "A ladder needs at least one box.", nameof(boxIntervals));
+
+        foreach (var interval in boxIntervals)
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(
+                interval.Count, nameof(boxIntervals));
+        
+        return boxIntervals;
+    }
+    
     /// <summary>The shipped default ladder: 1d / 7d / 1m / 6m / 1y, box 5 caps.</summary>
     public static LeitnerLadder Default { get; } = new(
     [

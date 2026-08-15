@@ -60,4 +60,35 @@ public class LeitnerLadderShould
         var ladders = new HashSet<LeitnerLadder> { a, b };
         Assert.Single(ladders);  
     }
+
+    [Fact]
+    public void PreserveIntervalsGivenToConstructor()
+    {
+        var ladder = new LeitnerLadder([
+            new ReviewInterval(1, IntervalUnit.Month),
+            new ReviewInterval(5, IntervalUnit.Year)
+        ]);
+
+        Assert.Equal(2, ladder.MaxBox);
+    }
+
+    [Fact]
+    public void RejectDefaultBoxIntervals() =>
+        Assert.Throws<ArgumentException>(
+            () => new LeitnerLadder(default));
+
+    [Fact]
+    public void RejectEmptyBoxIntervals() =>
+        Assert.Throws<ArgumentException>(
+            () => new LeitnerLadder([]));
+
+    [Fact]
+    public void RejectZeroCountInterval() =>
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new LeitnerLadder([new ReviewInterval(0, IntervalUnit.Day)]));
+
+    [Fact]
+    public void RejectInvalidBoxIntervalsViaWith() =>
+        Assert.Throws<ArgumentException>(
+            () => LeitnerLadder.Default with { BoxIntervals = default});
 }
