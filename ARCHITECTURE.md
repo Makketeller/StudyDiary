@@ -324,7 +324,7 @@ wrong for exactly as long as nobody noticed. Compute it from state and a supplie
 **The word "due" does not appear anywhere** — not in a type, a property, a method, a local, a test
 name or a UI string. DESIGN §5 makes "ready" the vocabulary and keeps "due"/"overdue" out of the UI;
 the cheapest way to keep a word out of the UI is for the value behind it never to have been called
-that. `NextReviewOn`, `IsReadyOn(today)`, `ReadyEntries`. Third grep.
+that. `NextReviewOn`, `IsReady(today)`, `ReadyEntries`. Third grep.
 
 The same section's harder constraint is not a naming rule and cannot be made one: no count of
 outstanding work is surfaced at all, so a correctly-named `ReadyEntries` still must not be rendered
