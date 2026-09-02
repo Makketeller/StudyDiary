@@ -44,4 +44,34 @@ public class ReviewIntervalShould
 
         Assert.Equal(date, interval.AddTo(date));
     }
+
+    [Fact]
+    public void AddMonthsAsCalendarMonths()
+    {
+        var interval = new ReviewInterval(1, IntervalUnit.Month);
+
+        Assert.Equal(
+            new DateOnly(2026, 9, 2),
+            interval.AddTo(new DateOnly(2026, 8, 2)));
+    }
+
+    [Fact]
+    public void ClampToTheLastDayOfAShorterMonth()
+    {
+        var interval = new ReviewInterval(1, IntervalUnit.Month);
+
+        Assert.Equal(
+            new DateOnly(2026, 2, 28),
+            interval.AddTo(new DateOnly(2026, 1, 31)));
+    }
+
+    [Fact]
+    public void AddYearsAsCalendarYears()
+    {
+        var interval = new ReviewInterval(1, IntervalUnit.Year);
+
+        Assert.Equal(
+            new DateOnly(2027, 6, 1),
+            interval.AddTo(new DateOnly(2026, 6, 1)));
+    }
 }
