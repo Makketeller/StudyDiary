@@ -8,7 +8,7 @@
 
 namespace StudyDiary.Domain.Scheduling;
 
-/// <summary>Classic Leitner: pass promotes one box, fail returns to box 1 (DESIGN §3);
+/// <summary>Classic Leitner: pass promotes one box, fail returns to box 1 (DESIGN §3).</summary>
 public sealed class LeitnerScheduler : IReviewScheduler
 {
     public ReviewState Advance(

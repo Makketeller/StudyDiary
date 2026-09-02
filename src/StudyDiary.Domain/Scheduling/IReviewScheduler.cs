@@ -9,7 +9,7 @@
 namespace StudyDiary.Domain.Scheduling;
 
 /// <summary>
-/// Turns a review into new sceduling state, and dedices readiness.
+/// Turns a review into new scheduling state, and decides readiness.
 /// Never sees an <c>Entry</c>: content type and review shape cannot reach it,
 /// which is what makes DESIGN §2's invariant structural (ARCHITECTURE).
 /// Never reads the clock - dates arrive as parameters.
