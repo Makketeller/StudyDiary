@@ -66,12 +66,31 @@ absent-reads-as-default policy: files written by 0.1.0 have no `modifiedAt`, and
 as "never edited" rather than throw.
 
 *Not pre-added at 0.1.0, unlike `isPractice`.* The review-history event shape is settled (DESIGN
-§7), so writing four of its five fields would diverge from a decided shape; `Entry`'s JSON shape is
-explicitly still open (DESIGN §12), so nothing obliges `modifiedAt` early. A field no code can
-write has undefined semantics, and exercising absent-→-default here — on the cheapest field in the
-format, where getting it wrong costs nothing — is worth more than the consistency.
+§7), so writing four of its five fields would diverge from a decided shape. Nothing similar
+obliges `modifiedAt` early: a field no code can write has undefined semantics, and exercising
+absent-→-default here — on the cheapest field in the format, where getting it wrong costs nothing
+— is worth more than the consistency.
 
-### 0.3.0 — Markdown + formatting toolbar.
+### 0.3.0 — Tags.
+
+Free-form, many-to-many labels: `#chemistry`, `#german`, `#thermodynamics`. Non-exclusive, unlike
+a deck — one entry is `#chemistry` *and* `#exam-january` without existing twice (DESIGN §10).
+
+**Placed here, early, on purpose.** DESIGN §10 says tags must land early because every entry
+written before tags exist is an untagged entry, and retro-tagging a year of notes never happens.
+Two releases of untagged entries is a backlog that drains through ordinary use.
+
+Tagging is available wherever an entry is: the browse screen from 0.1.0, the editor from 0.2.0,
+and mid-review. It is not a mode you enter, it is one more thing you do to an entry you are
+already looking at.
+
+`Entry` gains its tag set here, not at 0.1.0. Additive, so `schemaVersion` does not move
+(DESIGN §7), and absent reads as the empty set — which is exactly what every entry written before
+this release is. Unlike 0.11.0's Card-vs-Note default, there is no wrong answer available here.
+
+Filtering itself arrives with 0.10.0, since that is where the sessions it filters live.
+
+### 0.4.0 — Markdown + formatting toolbar.
 
 Markdown becomes the body format: bold, italic, headings, lists, links, fenced code blocks
 rendered monospace. A toolbar and keyboard shortcuts wrap the selection in the corresponding
@@ -80,29 +99,29 @@ syntax (DESIGN §9 for why not WYSIWYG).
 Renderer survey between `Markdown.Avalonia` (MIT) and `CodeWF.Markdown` (Avalonia 12 + Markdig);
 both are small community projects, so weigh them properly against the maintenance-cost rule.
 
-*Plain text is valid markdown*, so entries written in 0.1.0–0.2.0 need no migration.
+*Plain text is valid markdown*, so entries written in 0.1.0–0.3.0 need no migration.
 
-### 0.4.0 — LaTeX and chemistry.
+### 0.5.0 — LaTeX and chemistry.
 
 Inline and block maths embedded in markdown with live preview beside the input. **mhchem support
 is a hard selection criterion for the renderer** (DESIGN §9).
 
-Note the coupling: whichever markdown renderer 0.3.0 chose may already bundle a maths
+Note the coupling: whichever markdown renderer 0.4.0 chose may already bundle a maths
 integration, so evaluate the two together even though they ship separately.
 
-### 0.5.0 — Insertion palette.
+### 0.6.0 — Insertion palette.
 
 Searchable panel of common LaTeX and mhchem commands; clicking inserts at the cursor with the
-cursor parked in the first blank. Extends the 0.3.0 toolbar rather than introducing a second
+cursor parked in the first blank. Extends the 0.4.0 toolbar rather than introducing a second
 mechanism.
 
-### 0.6.0 — Syntax-highlighted code blocks.
+### 0.7.0 — Syntax-highlighted code blocks.
 
-Fenced code with per-language highlighting. Separate from 0.3.0 because highlighting means
+Fenced code with per-language highlighting. Separate from 0.4.0 because highlighting means
 another dependency (typically AvaloniaEdit / TextMate grammars) and it is pure polish on
 something that already works.
 
-### 0.7.0 — Images.
+### 0.8.0 — Images.
 
 Attach and display. Completes the MVP content set. Storage is an `attachments/` folder beside
 the two JSON files (DESIGN §7).
@@ -129,7 +148,7 @@ DESIGN §7's attachment rules all land here, and none of them are optional:
 Attaching a PDF and opening it in the system viewer belongs here too (DESIGN §9); inline PDF
 rendering is deferred.
 
-### 0.8.0 — DayLog.
+### 0.9.0 — DayLog.
 
 Optional free-form writing attached to a calendar day — **any number per day**, per profile
 (DESIGN §8). Never mandatory; most days may have none. During review, an optional toggle shows the
@@ -145,32 +164,11 @@ schema question and has to be settled before this release writes a byte.
 Independent of everything around it, which is why it lands before the multi-user work rather than
 after. Placed *after* the content releases, though, DESIGN §8's "same markdown container as an
 Entry" costs nothing: markdown, maths, code blocks and images all work in a journal post because
-0.3.0–0.7.0 already built the one content pipeline and the one renderer. A DayLog is not a reduced
+0.4.0–0.8.0 already built the one content pipeline and the one renderer. A DayLog is not a reduced
 journal format sitting beside the real one — and it is only free because of where this sits in the
 order.
 
 ## Review behaviour — makes it a study tool rather than a notebook
-
-### 0.9.0 — Tags.
-
-Free-form, many-to-many labels: `#chemistry`, `#german`, `#thermodynamics`. Non-exclusive, unlike
-a deck — one entry is `#chemistry` *and* `#exam-january` without existing twice (DESIGN §10).
-
-**Placed here, early, on purpose.** Two mechanisms ship together, and the second matters more:
-
-- **Bulk-tagging from the browse screen**, for clearing whatever backlog exists at that point in
-  one deliberate pass.
-- **Tagging wherever an entry is, including mid-review.** Noticing an untagged entry when it comes
-  round in box 3 and labelling it there costs nothing and needs no decision to sit down and tidy.
-
-The second is what makes the early placement worth it, and it changes the argument. Retro-tagging
-is not impossible — the ready pool hands you every entry eventually, so the untagged backlog
-drains through ordinary use, the same shape as DESIGN §5's backlog. What early placement buys is
-the *rate*: a box 5 entry comes round once a year, so every month tags do not exist is a month of
-entries that will take up to a year to surface. Bulk-tagging is the escape hatch for whatever the
-delay produced; mid-review tagging is why the backlog drains at all.
-
-Filtering itself arrives with 0.10.0, since that is where the sessions it filters live.
 
 ### 0.10.0 — Session behaviour.
 
