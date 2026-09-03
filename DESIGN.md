@@ -568,18 +568,13 @@ biggest source of friction in Anki's model, forcing an up-front decision about w
 belongs and duplication when it belongs in two. A tag set is non-exclusive and costs nothing to
 change later. One entry can be `#chemistry` *and* `#exam-january` without existing twice.
 
-Tags must land **early**, because every entry written before tags exist is an untagged entry
-and retro-tagging a year of notes never happens. Two mechanisms make that survivable, and the
-second matters more than the first:
-
-- **Bulk-tagging from the browse screen** ships with tags, for clearing whatever backlog
-  exists at that point in one deliberate pass.
-- **Tagging is available wherever an entry is, including mid-review.** Noticing an untagged
-  entry when it comes round in box 3 and labelling it there costs nothing and needs no
-  decision to sit down and tidy. The ready pool hands you every entry eventually, so the
-  untagged backlog drains through ordinary use rather than through a chore you have to
-  schedule — the same shape as §5's backlog, which shrinks by being used and is never
-  counted at you.
+Tags must land **early**, because every entry written before tags exist is an untagged entry and
+retro-tagging a year of notes never happens. What makes that survivable is that tagging is
+available **wherever an entry is** — browsing, editing, or mid-review. Noticing an untagged entry
+when it comes round in box 3 and labelling it there costs nothing and needs no decision to sit
+down and tidy. The ready pool hands you every entry eventually, so whatever backlog exists drains
+through ordinary use rather than through a chore you have to schedule — the same shape as §5's
+backlog, which shrinks by being used and is never counted at you.
 
 ---
 
@@ -610,10 +605,11 @@ undecided — if it appears below, no decision exists yet.
 - **Is the session cap a hard stop or a default stopping point?**
   §4 sets a default cap of 10 and also has "keep going" pulling further batches, without
   saying whether the cap bounds them. Pick one.
-- **Per-entity schema specifics.** The file-level shape is settled (§7) and the review-history
-  event is settled (§7). What remains is the exact JSON shape of `Entry` and `DayLog` —
-  including DayLog's id, its created-day and the timestamp that orders posts within a day (§8).
-  The next design step, due before the first byte is written.
+- **`DayLog`'s JSON shape.** The file-level shape is settled (§7), the review-history event is
+  settled (§7), and `Entry`'s is now a Data concern rather than a design one — Data owns a DTO per
+  persisted type, so the shape is decided when Data is written (ARCHITECTURE). What remains is
+  `DayLog`: its id, its created-day, and the timestamp that orders posts within a day (§8),
+  together with the title question below. Due before DayLog ships.
 - **What happens to review history when the ladder changes.** `boxBefore`/`boxAfter` are stored
   precisely so the log stays true under a changed ladder, but nothing records *which* ladder was
   in effect. Probably fine — FSRS cares about outcomes and dates, not intervals — but unexamined

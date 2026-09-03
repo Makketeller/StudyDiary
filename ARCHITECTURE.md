@@ -65,9 +65,12 @@ nothing of anyone else's beyond the BCL.
 slice persists.
 
 **Namespaces mirror the projects**, with `StudyDiary` as the root, and Domain is subdivided by
-concern — `StudyDiary.Domain.Scheduling` holds the ladder, the interval and the scheduler. Keeping
-the subdivision is worth the small friction: it is the cheapest available signal that a type has
-wandered into a neighbourhood it doesn't belong in.
+concern — `StudyDiary.Domain.Scheduling` holds the ladder, the interval and the scheduler;
+`StudyDiary.Domain.Entries` holds `Entry` and, when it ships, `DayLog`. Keeping the subdivision is
+worth the small friction: it is the cheapest available signal that a type has wandered into a
+neighbourhood it doesn't belong in. `Entries` referencing `Scheduling` is expected — an entry
+holds its own `ReviewState`. The reverse would not be: `Scheduling` never names a type from
+`Entries`, which is the same rule the scheduler's signature already enforces.
 
 ---
 
@@ -181,6 +184,14 @@ grep. If a `LeitnerScheduler` ever branches on it, enforcement-by-absence has be
 **That files exist.** Domain references neither `System.Text.Json` nor `StudyDiary.Data`; migration
 code lives in Data behind `IEntryStore` (DESIGN §7). This one is enforced by the reference graph in
 §2 and needs no vigilance at all.
+
+**Not on the list: identity.** `Entry.Create` calls `Guid.NewGuid()`, which is ambient in the same
+shape as a clock and is allowed anyway. The rule above is not "Domain touches nothing ambient", it
+is that DESIGN §3's determinism claim must stay checkable: two people applying the same rules to
+the same history and ladder compute the same next review date. No scheduling input derives from an
+id, so a fresh Guid cannot move a date. A clock can, which is the whole difference. The narrower
+test — *could this value change what the scheduler returns?* — is the one to apply to anything
+ambient that turns up later.
 
 ### Types: `record` vs `class`, and the equality trap
 
@@ -360,6 +371,31 @@ that have nothing to do with it.
 
 **The profile picker reads the header only** and never opens the payload. That is what keeps it
 working unchanged if `payload.json` ever becomes ciphertext.
+
+**Domain types are never serialized directly. Data owns a DTO per persisted type.** A DTO — a
+*data transfer object* — is a plain class whose only job is to match the file: settable properties,
+no validation, no behaviour. Data maps Domain → DTO on save and DTO → Domain on load, by hand,
+both directions.
+
+Three consequences, all load-bearing:
+
+- **Property names in Domain are not the file format.** Renaming a Domain property is a refactor,
+  not a schema change.
+- **The file shape is decided here, not inherited.** `EntryDto` nests a `ReviewStateDto`, because
+  box-and-entered-day is one thing in DESIGN §3 and stays one thing on disk. It mirrors the Domain
+  shape today; the point of the DTO is that it need not tomorrow.
+- **The review-history event lives here and has no Domain counterpart.** It carries `isPractice`,
+  which §4 forbids anywhere in Domain. Written by the App layer, read by nothing until FSRS
+  (DESIGN §7).
+
+DTOs are `internal` — Data's vocabulary, not App's. App receives Domain types.
+
+**Round-trip tests verify the mapping.** `StudyDiary.Data.Tests` saves, reloads, and asserts the
+result equals what went in. A field added to a Domain type and forgotten in the mapping is silent
+data loss otherwise.
+
+**JSON keys are camelCase** (`JsonNamingPolicy.CamelCase`), matching DESIGN §7's field names, while
+C# properties stay PascalCase. Set once in the shared `JsonSerializerOptions`.
 
 **Atomic write-then-replace now covers two files, not one.** Write to a temporary file in the same
 directory, then replace. In practice the header changes almost never, so an ordinary save writes the
