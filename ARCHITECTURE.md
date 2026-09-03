@@ -330,6 +330,18 @@ a future FSRS/SM-2 implementation is a swap rather than a rewrite (DESIGN §3, �
 today (DESIGN §4). A stored `IsReady` flag would need invalidating at every midnight and would be
 wrong for exactly as long as nobody noticed. Compute it from state and a supplied date.
 
+**`ReviewState` stores the day an entry entered its box, not its next-review date.** Both shapes
+answer readiness identically until the ladder changes: a stored next-review date is a snapshot of
+the old ladder, so an edit reaches an entry only at its next transition, while the entered-day
+applies it to everything at once. The entered-day is also the primitive — `AddMonths` clamps, so a
+derived date cannot be inverted back to the day it was derived from, which `ReviewIntervalShould`
+proves. Deriving state by replaying review history is the third option and is closed: the log
+contains practice events, so replay would have to read `isPractice`.
+
+**`ReviewState.Box` has no upper bound.** The maximum is the ladder's and `ReviewState` holds no
+ladder; `IntervalForBox` already range-checks. A type-level bound would also make every box-4
+entry unconstructable if the ladder ever shrank — saved data the app could not load.
+
 ### Naming
 
 **The word "due" does not appear anywhere** — not in a type, a property, a method, a local, a test
