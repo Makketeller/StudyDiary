@@ -43,6 +43,9 @@ public sealed class Entry
         ArgumentNullException.ThrowIfNull(body);
         ArgumentNullException.ThrowIfNull(reviewState);
 
+        if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(body))
+            throw new ArgumentException("An entry needs a title or a body.");
+
         Id = id;
         Title = title;
         Body = body;
