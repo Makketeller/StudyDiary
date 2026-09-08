@@ -89,6 +89,8 @@ the whole entry to box 1, including blanks you know. The answer to that is not a
 ladder but a smaller entry — an entry that repeatedly fails is usually one entry holding
 three facts, and splitting it is the correct fix rather than a workaround.
 
+An entry needs a title or a body (DECIDED). The completely-empty entry is the one case every review shape rejects — a Card needs a prompt, a Note needs a body — so "at least one non-blank field" is the only content rule safe to enforce before the Card/Note axis becomes explicit. Which specific field is mandatory depends on that axis and is deferred with it; until then the constructor forbids only both-blank. Enforced there rather than in the UI because §7 expects hand-edited files and a blank entry parses as perfectly valid JSON, so the constructor is the last line of defence — the same reasoning as the Guid.Empty check.
+
 Capture and browsing feel diary-like (dated entries you can flip back through). Review is
 active-recall by default, because the stated goal is to actually learn.
 
