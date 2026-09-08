@@ -1,4 +1,4 @@
-**Last updated:** 2026-09-03 · **Version:** pre-0.1.0 · **Repo:** 38 commits, public, GPLv3.
+**Last updated:** 2026-09-08 · **Version:** pre-0.1.0 · **Repo:** 43 commits, public, GPLv3.
 
 ## Exists and is committed
 
@@ -7,23 +7,20 @@
 - `StudyDiary.Domain.Scheduling` is complete and tested: `IntervalUnit`,
   `ReviewInterval`, `LeitnerLadder`, `ReviewOutcome`, `ReviewState`,
   `IReviewScheduler`, `LeitnerScheduler`.
-- `StudyDiary.Domain.Entries` holds `Entry`. **Committed untested** — the only
-  type in the project without tests.
-- **Tests: xUnit v3 — 38 tests, all green.** Unchanged this session. **38 green is
-  the environment benchmark.**
-- The four documents. `LICENSE`, `README.md`, `.gitmessage`, `.gitattributes`.
+- `StudyDiary.Domain.Entries` holds `Entry`, now tested by `EntryShould`.
+  The constructor forbids a both-blank title and body (DESIGN §2).
+- **Tests: xUnit v3 — 56 tests, all green. 56 green is the environment
+  benchmark.**
+- The four documents. `ARCHITECTURE.md`, `README.md`, `ROADMAP.md`, and this file.
 
 ## Does not exist yet
 
-- `EntryShould` — see next targets.
-- `DayLog` — the second entity. Not needed before 0.9.0.
-- `src/StudyDiary.Data` — not scaffolded. Due in the first release.
+- `src/StudyDiary.Data` — not scaffolded.
 - `StudyDiary.App` is the untouched Avalonia template.
 
 ## Known defects in committed code
 
-None known. `Entry` being untested is a gap, not a defect — nothing has been shown
-wrong, but nothing has been shown right either.
+None known.
 
 ## Known limits
 
@@ -37,18 +34,19 @@ there, not here.
 
 ## Next session targets
 
-**`EntryShould`**, at `tests/StudyDiary.Domain.Tests/Entries/EntryShould.cs`,
-mirroring the source layout. Worth covering:
-
-- `Create` starts a new entry in box 1 on its creation day (DESIGN §3).
-- `Create` generates a distinct id each time.
-- The constructor preserves all six values it is given.
-- `Guid.Empty` is rejected, and so are a null title, body or state.
-- `ApplyReview` replaces the state and changes nothing else.
-- Two entries with identical text are not equal — the test that proves `class`
-  rather than `record`.
-
-**Then `StudyDiary.Data`.** Both design questions that gated it are closed —
+**Scaffold `StudyDiary.Data`.** Both design questions that gated it are closed —
 `Entry`'s JSON shape is decided when Data is written, and the review-history event
-lives in Data as a DTO (ARCHITECTURE §5). Scaffolding `IEntryStore`, the JSON
-implementation and `StudyDiary.Data.Tests` is unblocked (ROADMAP 0.1.0).
+lives in Data as a DTO (ARCHITECTURE §5). The work is `IEntryStore`, the JSON
+implementation, and `StudyDiary.Data.Tests` round-tripping a saved profile folder
+(ARCHITECTURE §2, §5; ROADMAP 0.1.0).
+
+Watch for, when writing the mapping:
+
+- `EntryDto` nests a `ReviewStateDto` — box-and-entered-day is one unit on disk
+  (ARCHITECTURE §5).
+- Domain types are never serialized directly; Data maps Domain ↔ DTO by hand,
+  both directions, and the round-trip test is what catches a forgotten field.
+- JSON keys are camelCase; enums serialize as strings with pinned integers
+  behind them.
+- The header/payload split: `profile.json` carries `schemaVersion`, id, name,
+  `encryption`; `payload.json` carries entries, history and DayLogs.
