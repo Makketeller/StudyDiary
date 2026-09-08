@@ -1,4 +1,4 @@
-**Last updated:** 2026-09-08 · **Version:** pre-0.1.0 · **Repo:** 43 commits, public, GPLv3.
+**Last updated:** 2026-09-08 · **Version:** pre-0.1.0 · **Repo:** 44 commits, public, GPLv3.
 
 ## Exists and is committed
 
@@ -11,7 +11,8 @@
   The constructor forbids a both-blank title and body (DESIGN §2).
 - **Tests: xUnit v3 — 56 tests, all green. 56 green is the environment
   benchmark.**
-- The four documents. `ARCHITECTURE.md`, `README.md`, `ROADMAP.md`, and this file.
+- The four documents: DESIGN.md, ARCHITECTURE.md, ROADMAP.md and this file.
+- `LICENSE`, `README.md`, `.gitmessage`.
 
 ## Does not exist yet
 
