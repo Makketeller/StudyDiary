@@ -35,19 +35,25 @@ there, not here.
 
 ## Next session targets
 
-**Scaffold `StudyDiary.Data`.** Both design questions that gated it are closed —
-`Entry`'s JSON shape is decided when Data is written, and the review-history event
-lives in Data as a DTO (ARCHITECTURE §5). The work is `IEntryStore`, the JSON
-implementation, and `StudyDiary.Data.Tests` round-tripping a saved profile folder
-(ARCHITECTURE §2, §5; ROADMAP 0.1.0).
+**Write `StudyDiary.Data`.** The on-disk format and the store interface are both settled and
+recorded (ARCHITECTURE §5) — nothing about the shape is open, so this session is code. The work is
+`IEntryStore` and its JSON implementation, plus `StudyDiary.Data.Tests` round-tripping a saved
+profile folder (ARCHITECTURE §2, §5; ROADMAP 0.1.0).
+
+Decided this session, all in ARCHITECTURE §5:
+
+- Layout is `StudyDiary/profiles/<profile>/`, lowercase, from `LocalApplicationData`. The
+  `profiles/` level ships now so 0.12.0 never has to move a user's data.
+- Review history nests inside its entry; `payload.json` has two top-level keys, `entries` and
+  `dayLogs`, the latter written empty from the start.
+- `IEntryStore` is per-entry and async. `ReviewRecord` is public; DTOs stay internal.
+- Enum values keep their C# spelling on disk; camelCase applies to keys only.
 
 Watch for, when writing the mapping:
 
-- `EntryDto` nests a `ReviewStateDto` — box-and-entered-day is one unit on disk
-  (ARCHITECTURE §5).
-- Domain types are never serialized directly; Data maps Domain ↔ DTO by hand,
-  both directions, and the round-trip test is what catches a forgotten field.
-- JSON keys are camelCase; enums serialize as strings with pinned integers
-  behind them.
-- The header/payload split: `profile.json` carries `schemaVersion`, id, name,
-  `encryption`; `payload.json` carries entries, history and DayLogs.
+- `EntryDto` nests a `ReviewStateDto` — box-and-entered-day is one unit on disk.
+- Domain types are never serialized directly; Data maps Domain ↔ DTO by hand, both directions,
+  and the round-trip test is what catches a forgotten field.
+- The temp file for the atomic write goes in the same directory as its target.
+- The header/payload split: `profile.json` carries `schemaVersion`, id, name, `encryption`;
+  `payload.json` carries entries, history and DayLogs.
