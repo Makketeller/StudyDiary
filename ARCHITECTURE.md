@@ -367,6 +367,34 @@ a saved setting would make it persisted retroactively. How enums are *written* i
 Domain has no idea files exist; everything below is `StudyDiary.Data`'s job. These are DESIGN §7's
 rules restated as code obligations, and all of them hold from the first release.
 
+**The data folder layout is fixed from the first release.** Resolved from
+`Environment.SpecialFolder.LocalApplicationData`, so the same code lands in
+`~/.local/share/`, `%LOCALAPPDATA%` and `~/Library/Application Support/` respectively:
+
+```
+StudyDiary/
+└── profiles/
+    └── default/
+        ├── profile.json
+        ├── payload.json
+        └── attachments/    once images ship
+```
+
+**Profiles sit one level down from the first release, before profiles exist.** DESIGN §7 puts
+the pre-restore copy *beside* the profiles, so they are siblings in a container — the layout is
+already implied by a decision made long before the release that needs it. Building it now costs
+one `Path.Combine` segment. Not building it means the profiles release has to find a real user's
+only copy of their notes and move it, which is the worst code in the app to have to write.
+
+**Folder names are lowercase, from a single constant.** Linux is case-sensitive and Windows is
+not, so a name created as `Profiles` and looked up as `profiles` works on the dev machine's
+opposite and fails on Fedora. Matches `attachments/` (DESIGN §7).
+
+`payload.json` has exactly two top-level keys, `entries` and `dayLogs`. `dayLogs` is written as
+an empty array from the first release: it is a collection rather than a field with semantics, so
+there is no wrong default available, and it makes the payload's shape legible to someone reading
+the file by eye — which is a promise DESIGN §1 makes about this format.
+
 **The header/payload split is a code rule, not just a folder layout.** `profile.json` carries
 `schemaVersion`, the profile id, the profile name and `encryption` (`"none"` today). `payload.json`
 carries entries, review history and DayLogs. Two invariants follow:
@@ -398,9 +426,48 @@ Three consequences, all load-bearing:
   shape today; the point of the DTO is that it need not tomorrow.
 - **The review-history event lives here and has no Domain counterpart.** It carries `isPractice`,
   which §4 forbids anywhere in Domain. Written by the App layer, read by nothing until FSRS
-  (DESIGN §7).
+  (DESIGN §7). **It nests inside its entry on disk, not in a top-level log.** A flat array would
+  need a sixth field naming the entry it belongs to, where DESIGN §7 specifies five. Nesting makes
+  ownership structural instead: an event cannot reference an entry that does not exist, and
+  deleting an entry takes its history with it, so no reference counting is needed. Same reasoning
+  as attachments below, reaching the opposite arrangement for the same reason — an attachment is a
+  file the user may restore, an event is not. The usual argument for a flat log, that append-only
+  wants one, buys nothing here: the payload is rewritten whole on every save regardless, so
+  append-only is a rule about what may be done to the list, not about how the file is written.
 
-DTOs are `internal` — Data's vocabulary, not App's. App receives Domain types.
+**Data has two tiers, and only one of them is internal.** DTOs are `internal` — they are Data's
+private vocabulary for the file, and App never sees one. But App is the layer that appends a
+review event (§4), so the event type it constructs must be `public`. `ReviewRecord` —
+`ReviewedOn`, `Outcome`, `BoxBefore`, `BoxAfter`, `IsPractice` — is a sealed `record` by the same
+test as any other value object, and lives in Data's public surface. Domain does not reference
+Data, so `isPractice` still cannot reach it; the grep in §4 is unaffected.
+
+**`IEntryStore` is per-entry and asynchronous.**
+
+```csharp
+Task<IReadOnlyList<Entry>> GetAllAsync();
+Task AddAsync(Entry entry);
+Task UpdateAsync(Entry entry);
+Task DeleteAsync(Guid id);
+Task AppendReviewAsync(Guid entryId, ReviewRecord record);
+```
+
+Per-entry because the interface describes what App wants to do, not what storage happens to do
+underneath. A load-everything/save-everything interface would put App in charge of what the file
+contains, which is the one thing that would make §1's "SQLite arrives as a second implementation
+and App does not change" untrue — a store that must be handed the whole world cannot be backed
+by one that touches a single row. The JSON implementation genuinely does hold everything in
+memory and rewrite the file on every call; that it is hidden is the point.
+
+Asynchronous because `async` is contagious: a method that awaits must be `async`, and so must
+every caller above it. One word per signature now, against a refactor through the whole App layer
+later. For a sub-millisecond local write this is ceremony today and is accepted as such — the
+same trade as `isPractice` shipping in the first schema.
+
+A review is two store calls, because it is two facts: `UpdateAsync` for what the entry's state is
+now, `AppendReviewAsync` for what happened to it. Data puts them in the same place on disk. Free
+practice makes the second call and not the first, and never calls the scheduler at all — DESIGN
+§4's enforcement-by-absence, with nothing added to enforce it.
 
 **Round-trip tests verify the mapping.** `StudyDiary.Data.Tests` saves, reloads, and asserts the
 result equals what went in. A field added to a Domain type and forgotten in the mapping is silent
@@ -410,8 +477,14 @@ data loss otherwise.
 C# properties stay PascalCase. Set once in the shared `JsonSerializerOptions`.
 
 **Atomic write-then-replace now covers two files, not one.** Write to a temporary file in the same
-directory, then replace. In practice the header changes almost never, so an ordinary save writes the
-payload alone; the two move together only when a profile is created or renamed.
+directory, then replace (`File.Move(tmp, target, overwrite: true)`). Truncating the real file first
+means a crash leaves an empty one — the old copy destroyed before the new one exists. Rename is
+what avoids that: replacing a file by rename is atomic on both Linux and Windows, so any crash
+leaves either the complete old file or the complete new one. **The temp file must be in the same
+directory**, since atomicity only holds within one filesystem; across a mount boundary the rename
+degrades into copy-then-delete, which is the failure being avoided. In practice the header changes
+almost never, so an ordinary save writes the payload alone; the two move together only when a
+profile is created or renamed.
 
 **Absent reads as default.** A new optional property is never marked `required` and its absence never
 throws (DESIGN §7). Additive changes do not bump `schemaVersion`.
@@ -438,6 +511,12 @@ code path deletes an attachment automatically, ever.
 the reordering hazard and keeps the file readable by eye. Pin the integers anyway (§4) — it is the
 pinning that makes any later move to a numeric store safe rather than a silent reinterpretation of
 every row.
+
+**The camelCase rule covers keys, not values.** An enum is written with its C# member name
+unchanged — `"outcome": "Pass"`, not `"pass"`. Lowercasing it would mean a second naming policy,
+configured separately from the one for properties and able to drift from it, in exchange for
+nothing: the member name is the value's actual identity in the code, and one fewer transformation
+between code and disk is the safer default.
 
 **Paths are built with `Path.Combine`, always,** and the data folder is resolved from
 `Environment.SpecialFolder.LocalApplicationData`, which already resolves correctly per OS. A literal
