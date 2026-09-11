@@ -1,9 +1,11 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/StudyDiary.App/StudyDiary.App.csproj" />
+    <Project Path="src/StudyDiary.Data/StudyDiary.Data.csproj" />
     <Project Path="src/StudyDiary.Domain/StudyDiary.Domain.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/StudyDiary.Data.Tests/StudyDiary.Data.Tests.csproj" />
     <Project Path="tests/StudyDiary.Domain.Tests/StudyDiary.Domain.Tests.csproj" />
   </Folder>
 </Solution>
