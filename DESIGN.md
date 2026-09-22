@@ -314,7 +314,7 @@ exists to protect. Reopen if a real user asks, not preemptively.
 Backup must be trivial and restore must be *even easier* — an explicit MVP goal.
 
 - **The data is one folder per user**, containing the two JSON files described below,
-  plus an `attachments/` folder once images ship.
+  a `recovery/` folder of the app's own copies, and an `attachments/` folder once images ship.
   Backup = copy  that folder somewhere safe. The app
   helps the user find or produce it — a "reveal my
   data" action, an export action — rather than making them hunt through app-data folders.
@@ -335,6 +335,7 @@ A profile's data folder contains:
 profile.json      the header — small, plaintext forever
 payload.json      everything else — entries, review history, DayLogs
 attachments/      once images ship
+recovery/         the app's own copies — see Recovering from a damaged file
 ```
 The header carries `schemaVersion`, the profile id and name, and an `encryption` field (`"none"`
 in MVP). **The payload is one self-contained blob**, which is what "encryption-ready schema"
@@ -458,11 +459,16 @@ lands in the thin slice rather than with the feature that first reads it.
 The **app version and `schemaVersion` are separate counters** and almost never move together.
 Most releases are additive to the file format and leave `schemaVersion` alone.
 
-- **`schemaVersion` is a single integer**
-  at the top of `profile.json`, written from the first release.
+- **`schemaVersion` is a single integer** at the top of `profile.json`, written from the first
+  release.
 - **Additive changes do not bump it.** A new optional property is read as *absent → default*,
   never as an error. `System.Text.Json` already does this; the rule is simply that such a
-  property is never marked `required` and its absence never throws.
+  property is never marked required and its absence never throws.
+- **Everything else is required.** A property may be absent only if a file written by an earlier
+  release could legitimately lack it. Anything else missing means the file is damaged, not old,
+  and it is refused like one that will not parse. So every property the first release writes is
+  required, and so is every property of an object that did not exist before — a DayLog without
+  its id is damaged, whichever release introduced DayLogs.
 - **`schemaVersion` bumps only when an old app could misread a new file**, i.e. when the
   *meaning* of existing data changes. Renaming, re-typing or repurposing a field is a bump.
 - **Forward-incompatibility is stated, not silent.** If a file's `schemaVersion` is higher than
@@ -471,15 +477,65 @@ Most releases are additive to the file format and leave `schemaVersion` alone.
   the one way a local-first app destroys data it was trusted with.
 - Migration code, when eventually needed, lives in `StudyDiary.Data` behind `IEntryStore` —
   never in Domain, which has no idea files exist.
-- **Hand-edited files are expected, and the failure mode depends on what broke.** The
-  format is readable on purpose and "reveal my data" is a shipped action, so someone
-  will eventually move, rename or delete something. A **missing attachment** renders as
-  a visible placeholder in that one entry and nothing else changes — the entry keeps its
-  reference, so restoring the file fixes it, and nothing rewrites the payload to "clean
-  up" a reference the user may be about to restore. A **payload that will not parse** is
-  the opposite case: the app says so, names the file, and **refuses to write**, for the
-  same reason forward-incompatibility does. Partial load followed by a save is how a
-  local-first app destroys the data it was trusted with.
+- **Hand-edited files are expected, and the failure mode depends on what broke.** The format is
+  readable on purpose and "reveal my data" is a shipped action, so someone will eventually move,
+  rename or delete something. A **missing attachment** renders as a visible placeholder in that
+  one entry and nothing else changes — the entry keeps its reference, so restoring the file fixes
+  it, and nothing rewrites the payload to "clean up" a reference the user may be about to
+  restore. A **payload that will not parse** is the opposite case: the app says so, names the
+  file, and **refuses to write**, for the same reason forward-incompatibility does. Partial load
+  followed by a save is how a local-first app destroys the data it was trusted with. The app then
+  offers a recovery copy (below).
+
+### Recovering from a damaged file
+
+**A non-technical user who damages the file must be able to recover without editing JSON
+(DECIDED).** Refusing to write (above) is what keeps the data safe, but on its own it is a
+lockout: the notes are intact and unreachable, and the only way back is editing JSON by hand. So
+the app keeps its own copies and offers one back.
+
+- **Checked once, when a profile opens.** The app reads the files only then and holds everything
+  in memory afterwards, so that is the only moment damage can matter. An edit made while the app
+  is running is simply overwritten by the next save. No watching, no polling.
+- **Recovery copies are the app's own, kept in the profile's `recovery/` folder.** Not hidden —
+  a file cannot be hidden from the person who owns the machine, and trying would contradict §1 —
+  just out of the way and named for what they are. Each is a byte-for-byte copy of `profile.json`
+  and `payload.json` taken together, so a copy of the payload *is* the payload for the two rules
+  above: if the payload is ever encrypted, so are its copies. Attachments are not copied; a save
+  never rewrites them, and a missing one already has its own answer.
+- **When a profile will not load, the app offers the newest copy that does,** in plain words,
+  saying when it was taken so the user knows what may be missing:
+
+  > Your diary couldn't be opened, so nothing has been changed. StudyDiary keeps its own
+  > copies, and the most recent one is from today at 14:30. Open that copy instead?
+  >
+  > The damaged file has been kept at `…`. You can look at it yourself if you want to.
+
+  It leads with *nothing has been changed* because that is true, and it is what someone who has
+  just broken something needs to hear first. Declining changes nothing further, and the profile
+  stays closed.
+- **The damaged file is kept, never deleted.** It is copied aside under a name that says what it
+  is *before* the question is asked, so the path in the message is real whichever answer the
+  user gives. They may have made deliberate edits worth salvaging, or know someone who can fix
+  it — the same reasoning as pre-restore copies.
+- **If no copy loads, say so. Never fall back to an empty profile.** Opening an empty diary and
+  saving it would replace years of notes with nothing: the partial-load-then-save failure in its
+  purest form.
+- **Newer is not damaged.** A file whose `schemaVersion` is higher than the app understands gets
+  its own message (above) and is never offered a copy — restoring one would silently throw away
+  everything the newer version wrote.
+- **The app may delete its own older recovery copies, and nothing else.** The one exception to
+  nothing being deleted automatically, and narrow on purpose: a recovery copy is a file the app
+  made for itself and the user never placed, and it is only removed once newer ones exist. The
+  damaged file, pre-restore copies and attachments are never removed by the app.
+
+**Recovery copies are not a backup.** They sit on the same disk as the file they protect, so they
+cover a mistake in the file or a bug in the app, and nothing about the disk failing. A backup is
+the whole folder somewhere else, and the app's job there is to help the user make one. Different
+problems, so deliberately different names.
+
+**Taken from the first release that writes a file.** A copy that was never taken cannot be
+offered — the same reason review history cannot be backfilled.
 
 ---
 
@@ -630,7 +686,9 @@ undecided — if it appears below, no decision exists yet.
   to the recipient's DayLogs for that day (§8), which is either a pleasant accident or a small lie
   about your own diary. The alternative — keeping the sender's date — links to DayLogs the
   recipient never wrote. Unexamined; nothing depends on it before shared import ships.
-
+- **How many recovery copies, and when they are taken.** A copy at every save means recovering
+  loses nothing, but a bug in the app gets copied too; a copy per session survives a bug, but
+  recovering from it loses that session. Probably some of each. Due before the store is written.
 ---
 
 ## 13. Reversals

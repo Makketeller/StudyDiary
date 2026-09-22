@@ -377,6 +377,7 @@ StudyDiary/
     └── default/
         ├── profile.json
         ├── payload.json
+        ├── recovery/       the app's own copies (DESIGN §7)
         └── attachments/    once images ship
 ```
 
@@ -486,12 +487,26 @@ degrades into copy-then-delete, which is the failure being avoided. In practice 
 almost never, so an ordinary save writes the payload alone; the two move together only when a
 profile is created or renamed.
 
-**Absent reads as default.** A new optional property is never marked `required` and its absence never
-throws (DESIGN §7). Additive changes do not bump `schemaVersion`.
+**Absent reads as default, and only where an older file could lack the key.** A property added
+to an existing type is optional: never `[JsonRequired]`, and its absence never throws
+(DESIGN §7). Every other property is `[JsonRequired]` — everything the first release writes, and
+every property of a type that did not exist before. A missing required key makes the reader throw
+a `JsonException`, and the store treats that exactly like a payload that will not parse. Additive
+changes do not bump `schemaVersion`.
+
+The attribute rather than the C# `required` keyword. The serializer treats the two the same, but
+the keyword does not compile under `System.Text.Json` source generation (checked 2026-09), and
+the attribute keeps source generation available if trimming ever makes it necessary.
 
 **Refuse to write rather than write a partial object.** Two cases, one rule: a `schemaVersion` higher
 than this app understands, and a payload that will not parse. Say so, name the file, and do not save.
 Silent field-dropping on save is the one way a local-first app destroys the data it was trusted with.
+Only the second case then offers a recovery copy: a newer file is not damaged (DESIGN §7).
+
+**"No profile yet" and "a profile that will not load" never share a code path.** The first is a
+first run and creates a profile. The second never does: it refuses, copies the damaged file
+aside, and offers a recovery copy. A `TryLoad` that falls back to an empty profile on failure is
+the exact shape of the bug DESIGN §7 forbids, and it looks like reasonable code.
 
 **A missing attachment is not a parse failure.** It renders as a visible placeholder in that one
 entry and changes nothing else. The entry keeps its reference, and the payload is never rewritten to

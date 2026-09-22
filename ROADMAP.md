@@ -31,8 +31,9 @@ and `win-x64`, with a `.desktop` entry alongside the Linux binary so double-clic
 too. No editing, no styling.
 
 Scaffolds `StudyDiary.Data` (`IEntryStore` + the JSON implementation) and `StudyDiary.Data.Tests`
-(round-trip a saved file). Establishes the `profile.json` + `payload.json` file shape (DESIGN §7),
-the App-layer `TimeProvider` seam that supplies "today", `CreatedOn`/`CreatedAt` on `Entry`, and
+(round-trip a saved file, and refuse a hand-damaged one). Establishes the
+ `profile.json` + `payload.json` file shape (DESIGN §7), the App-layer
+ `TimeProvider` seam that supplies "today", `CreatedOn`/`CreatedAt` on `Entry`, and
 pinned integer values on `outcome`. Each of those is nearly free now and a migration later.
 
 `profile.json` carries all four header fields from this release: `schemaVersion`, the profile id,
@@ -47,12 +48,27 @@ it lacks that check.
 free practice ships at 0.10.0; it is in the schema from the start so that release adds no format
 change. Nothing in 0.1.0 reads any of it back: the review screen only needs the current box.
 
+**Recovery copies are taken from this release** (DESIGN §7). The app keeps its own copies of the
+profile's two files in `recovery/`, and when a profile will not load it offers the newest copy
+that does: one dialog, shown only when something is wrong. The damaged file is copied aside
+before the question is asked, and if no copy loads the app says so rather than opening an empty
+profile.
+
+Here rather than later because this is the first release that refuses a file it cannot load, and
+refusal with no way back is a lockout: the notes are intact and a non-technical user cannot reach
+them. A copy that was never taken cannot be offered, so taking them starts with the first write,
+even though everything else about recovery waits for Data resilience, beyond 1.0.
+
+**Open before building this:** how many copies, and when they are taken (DESIGN §12).
+
 *Windows caveat:* the extra binary is one more `dotnet publish` line, but a Windows build that has
 never been launched on Windows is a claim, not a release. Either smoke-test it in a VM before
 tagging or mark it explicitly untested. Path handling must use `Path.Combine` throughout —
 `LocalApplicationData` already resolves correctly per OS.
 
-*Done when:* write an entry, close, reopen tomorrow, pass it, and it returns in a week.
+*Done when:* write an entry, close, reopen tomorrow, pass it, and it returns in a week. And: delete
+a key from `payload.json` by hand, reopen, and the app offers a copy instead of crashing or opening
+empty.
 
 ---
 
@@ -253,6 +269,9 @@ history and DayLogs only.
 "Reveal my data" and human-readable JSON export. Backup is a copy of the profile's folder —
 `profile.json`, `payload.json` and `attachments/` — and the app's job is to help the user find or
 produce it rather than making them hunt through app-data folders (DESIGN §7).
+
+**Open before building this:** the profile folder also holds `recovery/` (DESIGN §7). Whether a
+backup carries it is undecided; nothing depends on it before this release.
 
 **Bringing a file in is three paths, not one, and the app cannot tell which the user meant.** So
 it asks, in the user's words rather than the format's (DESIGN §7):
@@ -485,13 +504,27 @@ unticked the wrong box" is how someone mails out their journal.
 dyslexia-friendly options, string externalization. Boring, permanent, and the sort of thing that
 never gets done if it is not written down.
 
-**Data resilience.** Rolling automatic backups (keep the last N), a checksum on load, and a "your
-file looks damaged, here are your backups" recovery path. Five years of PhD notes deserve more
-than one file and good intentions. *Note the tension:* DESIGN §7 says nothing deletes files the
-user did not point at, which is why orphaned attachments and `pre-restore/` copies accumulate
-forever. Rolling backups do delete, and the distinction that makes it legal is that these are
-app-created files in an app-owned folder on a schedule the user set. Anything the user placed or
-named stays untouched.
+**Data resilience.** The basic recovery path ships at 0.1.0 (DESIGN §7): the app's own copies,
+and the newest one that loads offered back when a profile will not open. Five years of PhD notes
+deserve more than that minimum, and what stays here is the rest of it:
+
+- **Comparison on load.** A hand-edit that still parses — an entry cleanly deleted, say — passes
+  every check the 0.1.0 load makes, and only comparing against the app's own copy would notice.
+  It can report the difference but not undo it, because the app cannot tell a mistake from a
+  deliberate edit.
+- **Choosing among copies**, rather than being offered only the newest.
+- **Automatic backups to a folder the user chooses.** The recovery copies and a real backup are
+  different problems: a copy beside the file protects against a bug in this app or a mistake in
+  the file, and does nothing about the disk failing. So the user-chosen destination is the part
+  that makes it a backup, and pointing it at a synced folder is the user's call — the app never
+  talks to a network itself, so DESIGN §1 holds either way. Multiple kept versions, and finding
+  the folder for the user rather than making them hunt.
+
+*Note the tension:* DESIGN §7 lets the app delete its own older recovery copies and nothing else,
+which is why orphaned attachments and `pre-restore/` copies accumulate forever. Keeping several
+versions in a user-chosen backup folder means deleting old ones from a folder the user picked,
+which that exception does not cover. Decide it when this is built, rather than stretching the
+exception to fit.
 
 ## 2.0 — the architectural break: sync and mobile
 
