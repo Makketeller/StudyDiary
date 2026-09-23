@@ -7,17 +7,21 @@
 // option) any later version. See LICENSE for details.
 
 using StudyDiary.Domain.Scheduling;
+using System.Text.Json.Serialization;
+
 namespace StudyDiary.Data;
 
-
 /// <summary>
-/// <see cref="ReviewState"/> as it sits on disk: no validation, settable
+/// <see cref="ReviewState"/> as it sits on disk: settable
 /// properties, built empty and filled in. Nests inside <c>EntryDto</c>,
 /// because box-and-entered-day is one thing in DESIGN §3 and stays one
 /// thing in the file (ARCHITECTURE).
 /// </summary>
 internal sealed class ReviewStateDto
 {
+    [JsonRequired]
     public int Box { get; set; }
+
+    [JsonRequired]
     public DateOnly EnteredOn { get; set; }
 }
