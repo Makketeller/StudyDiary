@@ -491,8 +491,8 @@ profile is created or renamed.
 to an existing type is optional: never `[JsonRequired]`, and its absence never throws
 (DESIGN §7). Every other property is `[JsonRequired]` — everything the first release writes, and
 every property of a type that did not exist before. A missing required key makes the reader throw
-a `JsonException`, and the store treats that exactly like a payload that will not parse. Additive
-changes do not bump `schemaVersion`.
+a `JsonException`, and the store treats that exactly like a payload that will not parse. 
+`schemaVersion` bumps with every minor and major release (DESIGN §7).
 
 The attribute rather than the C# `required` keyword. The serializer treats the two the same, but
 the keyword does not compile under `System.Text.Json` source generation (checked 2026-09), and

@@ -385,6 +385,19 @@ Accidentally mailing someone your journal is the worst thing this app could do, 
 the wrong box" is a real failure mode. Entries-only is what the share button *does*; including
 everything is the separately-named backup action, not an option on the same dialog.
 
+**A share may be narrowed before it is sent.** The tag and date filters that serve free practice
+(§4) also choose what goes into a share — "my thermodynamics entries from this term". Narrowing
+only ever removes entries from a share; it is never a route to adding anything the table above
+excludes.
+
+**A share file is read, never written back.** The refusal in the schema policy above exists
+because an app saves its own files over themselves, and a share is not one of those: importing
+reads it once and creates new entries. So an app meeting a share written by a newer version
+imports what it understands and says what it could not — an entry arriving without its tags is a
+smaller loss than a refusal, and the sender's copy is untouched either way. A share that is
+damaged rather than new is still refused, like any file that will not parse. A non-additive
+change to the share format would need its own answer; nothing planned is one.
+
 ### Restore is not the same as import
 
 Both start with a file picker, and the app cannot tell from the file which the user meant. So it
@@ -456,34 +469,41 @@ lands in the thin slice rather than with the feature that first reads it.
 
 ### Schema version and migration policy
 
-The **app version and `schemaVersion` are separate counters** and almost never move together.
-Most releases are additive to the file format and leave `schemaVersion` alone.
+**`schemaVersion` bumps with every minor and major release (DECIDED)**, whether or not that
+release changes the file. A patch never bumps it, since a patch is a bug fix only. It stays its
+own integer rather than a copy of the app version, because minors restart at every major and
+`schemaVersion` must only ever go up.
 
 - **`schemaVersion` is a single integer** at the top of `profile.json`, written from the first
   release.
-- **Additive changes do not bump it.** A new optional property is read as *absent → default*,
-  never as an error. `System.Text.Json` already does this; the rule is simply that such a
-  property is never marked required and its absence never throws.
+- **An app reads every file at or below its own `schemaVersion`.** A property a later release
+  added is read as *absent → default* when an older file lacks it, never as an error.
+  `System.Text.Json` already does this; the rule is simply that such a property is never marked
+  required and its absence never throws.
 - **Everything else is required.** A property may be absent only if a file written by an earlier
   release could legitimately lack it. Anything else missing means the file is damaged, not old,
   and it is refused like one that will not parse. So every property the first release writes is
   required, and so is every property of an object that did not exist before — a DayLog without
   its id is damaged, whichever release introduced DayLogs.
-- **`schemaVersion` bumps only when an old app could misread a new file**, i.e. when the
-  *meaning* of existing data changes. Renaming, re-typing or repurposing a field is a bump.
-- **Forward-incompatibility is stated, not silent.** If a file's `schemaVersion` is higher than
-  the app understands, the app says so and refuses to write, rather than loading a partial
-  object and saving it back with the unknown fields dropped. Silent field-dropping on save is
-  the one way a local-first app destroys data it was trusted with.
-- Migration code, when eventually needed, lives in `StudyDiary.Data` behind `IEntryStore` —
-  never in Domain, which has no idea files exist.
+- **An app refuses every file above its own `schemaVersion`.** It says so and refuses to write,
+  rather than loading a partial object and saving it back with the unknown fields dropped.
+  Silent field-dropping on save is the one way a local-first app destroys data it was trusted
+  with. The message says the file was saved by a newer version and asks the user to update.
+- **Why every release, and not only the ones that change the file.** Both close the hole (§13),
+  but bumping only on a format change needs a judgement at every release, and one missed
+  judgement reopens it. Bumping every time needs none. The cost is that an older app refuses
+  some files it could have read, which only matters when a file moves between versions.
+- **A change that is not additive needs migration code.** Renaming, re-typing or repurposing a
+  field means an older file no longer reads correctly as *absent → default*, so the newer app
+  has to convert it. That code lives in `StudyDiary.Data` behind `IEntryStore` — never in
+  Domain, which has no idea files exist.
 - **Hand-edited files are expected, and the failure mode depends on what broke.** The format is
   readable on purpose and "reveal my data" is a shipped action, so someone will eventually move,
   rename or delete something. A **missing attachment** renders as a visible placeholder in that
   one entry and nothing else changes — the entry keeps its reference, so restoring the file fixes
   it, and nothing rewrites the payload to "clean up" a reference the user may be about to
   restore. A **payload that will not parse** is the opposite case: the app says so, names the
-  file, and **refuses to write**, for the same reason forward-incompatibility does. Partial load
+  file, and **refuses to write**, for the same reason a newer file is refused. Partial load
   followed by a save is how a local-first app destroys the data it was trusted with. The app then
   offers a recovery copy (below).
 
@@ -714,3 +734,19 @@ move boxes. The cost is that a custom first interval is no longer configurable; 
 anyone wants one.
 
 Reopen only if a real user wants a first interval that differs from box 1's.
+
+### 2026-09-22 — `schemaVersion` bumps with every release
+
+§7 originally bumped `schemaVersion` only when an old app could misread a new file, and left it
+alone for additive changes, reading an absent property as its default.
+
+The defect: absent → default protects a newer app reading an older file, and nothing protected
+the reverse. An older app met a newer file carrying the same number, loaded it, skipped the keys
+it did not know, and dropped them on its next save — every tag on every entry, silently. That is
+the field-dropping §7 calls the one way this app destroys data, through a door §7 had left open.
+
+Bumping only when a release changes the file was considered, and would close the hole too. It
+was rejected because it needs a judgement at every release, and one missed judgement reopens it.
+The cost of bumping every time is that an older app refuses some files it could have read.
+
+Reopen only if those refusals turn out to be a real nuisance.

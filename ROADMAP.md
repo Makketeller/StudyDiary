@@ -13,8 +13,8 @@
 >
 > Minor is an integer, not a decimal: 0.9.0 → 0.10.0 → 0.11.0.
 >
-> The app version and the data file's `schemaVersion` are **separate counters** and almost never
-> move together (DESIGN §7). Most releases below are additive to the file format.
+> The app version and the data file's `schemaVersion` are separate counters that move together:
+> every minor and major release bumps `schemaVersion`, and a patch never does (DESIGN §7).
 >
 > Order is dependency-ordered, not contractual.
 
@@ -76,8 +76,9 @@ empty.
 
 ### 0.2.0 — Edit an entry.
 
-Retires the delete-and-retype workaround. Adds `modifiedAt` (additive; `schemaVersion` unchanged).
-First, smallest, highest-relief feature — and deliberately the first live test of DESIGN §7's
+Retires the delete-and-retype workaround. Adds `modifiedAt` (additive,
+so older files simply lack it). First, smallest, highest-relief 
+feature — and deliberately the first live test of DESIGN §7's
 absent-reads-as-default policy: files written by 0.1.0 have no `modifiedAt`, and absent must read
 as "never edited" rather than throw.
 
@@ -100,8 +101,8 @@ Tagging is available wherever an entry is: the browse screen from 0.1.0, the edi
 and mid-review. It is not a mode you enter, it is one more thing you do to an entry you are
 already looking at.
 
-`Entry` gains its tag set here, not at 0.1.0. Additive, so `schemaVersion` does not move
-(DESIGN §7), and absent reads as the empty set — which is exactly what every entry written before
+`Entry` gains its tag set here, not at 0.1.0. Additive (DESIGN §7): 
+absent reads as the empty set — which is exactly what every entry written before
 this release is. Unlike 0.11.0's Card-vs-Note default, there is no wrong answer available here.
 
 Filtering itself arrives with 0.10.0, since that is where the sessions it filters live.
@@ -220,8 +221,7 @@ at 0.1.0, not here.
 **Absent must read as Card, and this is the first time that choice has a wrong answer.** Entries
 written 0.1.0–0.10.0 used title-as-prompt, which *is* a Card; if absent defaults to Note, every
 entry ever written silently changes how it is presented. Scheduling is untouched either way —
-DESIGN §2's invariant guarantees that — which is exactly why it could ship unnoticed. Additive, so
-`schemaVersion` does not move (DESIGN §7).
+DESIGN §2's invariant guarantees that — which is exactly why it could ship unnoticed. 
 
 **Open before building this:** whether Notes should ever allow a pure re-read mode, against the
 current recall-first default (DESIGN §12). This is the release that forces it.
@@ -284,7 +284,7 @@ it asks, in the user's words rather than the format's (DESIGN §7):
 - **"Add as a new profile"** — creates a profile from the file, leaving everything else alone.
   Follows profiles at 0.12.0, which is why this release sits here.
 - **A share file** offers neither: it adds entries to the current profile, because a share file
-  has no profile to be. (Producing share files is not scheduled — see beyond 1.0.)
+  has no profile to be. (Producing them ships next, at 0.14.0.)
 
 **Import copies, never moves.** Moving would delete the user's only backup from where they put it.
 "Move" may exist later as an explicit, clearly-labelled option; restore must never be able to
@@ -298,9 +298,31 @@ deliberately not on the same dialog as a checkbox.
 
 ---
 
+### 0.14.0 — Share entries.
+
+Making a share file: entries and tags only — no box state, no review history, and **never
+DayLogs** (DESIGN §7). What goes in is chosen with the tag and date filters from 0.10.0, so "my
+thermodynamics entries from this term" is one dialog rather than a manual selection.
+
+Here because 0.13.0 is where a share file can first be *read*, and a format nobody can produce is
+not a feature. Everything this release needs already exists: tags from 0.3.0, the filters from
+0.10.0, and the file-picker path from 0.13.0.
+
+**The UI rule is the load-bearing part.** Entries-only is what the share button *does*, never a
+checkbox on the backup dialog, because "I unticked the wrong box" is how someone mails out their
+journal.
+
+**No "export for an older version" option, deliberately.** A share file is read and never written
+back, so an older app imports what it understands, skips what it does not, and says so (DESIGN
+§7). The sender keeps everything either way, and nobody has to know which version the recipient
+runs.
+
+**Open before building this:** the two questions DESIGN §12 has been holding — whether a share
+carries its entries' attachments, and what creation date an imported entry gets.
+
 ## Finishing
 
-### 0.14.0 — Settings, search and polish.
+### 0.15.0 — Settings, search and polish.
 
 Search entries, keyboard shortcuts, first-run empty states, and the styling pass 0.1.0 skipped.
 Surfaces the settings that have accumulated hardcoded defaults — session cap, and the ladder if
@@ -316,7 +338,7 @@ acquire one. Whatever bounds it is a UI concern and belongs here.
 This is where "intuitive like a new video game, not like default Anki" gets tested on someone who
 is not the author.
 
-### 0.15.0 — First-run tutorial.
+### 0.16.0 — First-run tutorial.
 
 Under sixty seconds, skippable at every step, re-openable from Help, never blocking. Required
 before 1.0 because 1.0 is the version handed to a stranger.
@@ -340,7 +362,7 @@ Show that the toggle exists and state the promise in one sentence; do not fake a
 Being the only tool that does this is the reason a stranger picks it over the Obsidian plugin, so
 it earns the final beat rather than a settings checkbox.
 
-### 0.16.0 — macOS packaging.
+### 0.17.0 — macOS packaging.
 
 GitHub Actions matrix completing the third release target. macOS needs notarization and therefore
 a Mac runner, which is why it trails Linux and Windows (ARCHITECTURE). **`osx-arm64` is the
@@ -491,14 +513,6 @@ entry. The friction between having a thought and recording it is where most note
 **Interop: import and export.** Anki `.apkg` import, markdown-folder import/export, CSV. Export
 matters more than import — it is the data-portability promise made real, and it is what lets a
 user leave. An app that is easy to leave is one people trust enough to stay in.
-
-**Producing share files** belongs here too, and is deliberately not scheduled before 1.0. DESIGN
-§7 specifies the artifact — entries and tags only, no box state, no review history, and **never
-DayLogs** — but nothing depends on it, and DESIGN §12 has two unanswered questions gating it:
-whether a share carries its entries' attachments, and whose creation date an imported entry gets.
-*Consuming* a share file already ships at 0.13.0. The UI rule is the load-bearing part:
-entries-only is what the share button *does*, never a checkbox on the backup dialog, because "I
-unticked the wrong box" is how someone mails out their journal.
 
 **Accessibility and internationalization.** Screen-reader labels, font scaling, high-contrast and
 dyslexia-friendly options, string externalization. Boring, permanent, and the sort of thing that
