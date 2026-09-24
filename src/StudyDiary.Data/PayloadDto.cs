@@ -14,8 +14,9 @@ namespace StudyDiary.Data;
 /// <summary>
 /// <c>payload.json</c> as it sits on disk: everything except the header
 /// (DESIGN §7), in exactly two top-level keys (ARCHITECTURE). DayLogs are
-/// held as raw JSON until the DayLog type exists, so they are carried
-/// through a save untouched, never dropped.
+/// held as raw JSON until the DayLog type exists, so any that turn up
+/// before then - hand-written, or in a payload.json copied on its own from
+/// a newer install - are carried through a save untouched, never dropped.
 /// </summary>
 internal sealed class PayloadDto
 {
