@@ -25,7 +25,7 @@ public class ReviewRecordShould
         Assert.Equal(ReviewOutcome.Pass, record.Outcome);
         Assert.Equal(2, record.BoxBefore);
         Assert.Equal(3, record.BoxAfter);
-        Assert.False(record.IsPractice);   
+        Assert.False(record.IsPractice);
     }
 
     [Theory]
@@ -37,7 +37,7 @@ public class ReviewRecordShould
         Assert.Throws<ArgumentOutOfRangeException>(
             () => new ReviewRecord(
                 ReviewedOn, ReviewOutcome.Pass, before, after, false));
-    
+
     [Fact]
     public void RejectBoxBelowOneViaWith()
     {
@@ -47,7 +47,7 @@ public class ReviewRecordShould
         Assert.Throws<ArgumentOutOfRangeException>(
             () => valid with { BoxBefore = 0 });
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => valid with { BoxAfter = 0});
+            () => valid with { BoxAfter = 0 });
     }
 
     [Fact]
@@ -69,5 +69,23 @@ public class ReviewRecordShould
 
         Assert.Equal(record.BoxBefore, record.BoxAfter);
         Assert.True(record.IsPractice);
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(-1)]
+    public void RejectAnUnknownOutcome(int outcome) =>
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new ReviewRecord(
+                ReviewedOn, (ReviewOutcome)outcome, 1, 2, false));
+
+    [Fact]
+    public void RejectAnUnknownOutcomeViaWith()
+    {
+        var valid = new ReviewRecord(
+            ReviewedOn, ReviewOutcome.Pass, 1, 2, false);
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => valid with { Outcome = (ReviewOutcome)2 });
     }
 }
