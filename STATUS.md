@@ -1,4 +1,4 @@
-**Last updated:** 2026-09-23 · **Version:** pre-0.1.0 · **Repo:** 58 commits, public, GPLv3.
+**Last updated:** 2026-09-24 · **Version:** pre-0.1.0 · **Repo:** 67 commits, public, GPLv3.
 
 ## Exists and is committed
 
@@ -46,6 +46,11 @@ there, not here.
 This session's decisions are recorded in DESIGN §7 and §13,
 and in ROADMAP 0.1.0 and 0.14.0.
 
+Enums held by records are validated with `Enum.IsDefined`, a null ladder
+interval is refused, and the enum converter will read names only, all
+recorded in ARCHITECTURE. DESIGN §12 gained one open question: whether a
+backup carries `recovery/`.
+
 ## Next session targets
 
 **The shared `JsonSerializerOptions`, then the mapping, then `IEntryStore`.**
@@ -58,6 +63,12 @@ Open before the options:
   0.1.0's publishing settings do, and the store is easier to write once than twice.
 - **Non-ASCII escaping.** Default settings write `å`, `ö` and `μ` as `\u00E5`-style escapes,
   which fights DESIGN §1's human-readable promise. There is an encoder setting; check the docs.
+- **Unknown keys.** By default the reader skips keys it doesn't know, so a
+  payload.json copied alone from a newer install loads and loses its new
+  fields on the next save; the version check only sees profile.json.
+  `JsonUnmappedMemberHandling.Disallow` refuses instead. Must ship in 0.1.0,
+  since it protects the older app. Read `schemaVersion` before parsing
+  strictly, or a newer header reads as damaged. If adopted, it is a DESIGN §7 rule too: a hand-added key would then get the file refused.
 
 Open before `JsonEntryStore`:
 
@@ -84,3 +95,8 @@ Watch for, when writing the mapping:
 - The temp file for the atomic write goes in the same directory as its target.
 - The header/payload split: `profile.json` carries `schemaVersion`, id, name, `encryption`;
   `payload.json` carries entries, history and DayLogs.
+- The enum converter is built with `allowIntegerValues: false` (ARCHITECTURE).
+  That makes `ReviewRecordDto`'s summary half-wrong, since outcomes now fail
+  in the reader, not the mapping. Amend it in the same commit.
+- A load test with `"outcome": 99`, and with `"outcome": "99"`, asserts the
+  file is refused.
