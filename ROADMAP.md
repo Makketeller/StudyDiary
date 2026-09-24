@@ -77,7 +77,7 @@ empty.
 ### 0.2.0 — Edit an entry.
 
 Retires the delete-and-retype workaround. Adds `modifiedAt` (additive,
-so older files simply lack it). First, smallest, highest-relief 
+so older files simply lack it). First, smallest, highest-relief
 feature — and deliberately the first live test of DESIGN §7's
 absent-reads-as-default policy: files written by 0.1.0 have no `modifiedAt`, and absent must read
 as "never edited" rather than throw.
@@ -101,7 +101,7 @@ Tagging is available wherever an entry is: the browse screen from 0.1.0, the edi
 and mid-review. It is not a mode you enter, it is one more thing you do to an entry you are
 already looking at.
 
-`Entry` gains its tag set here, not at 0.1.0. Additive (DESIGN §7): 
+`Entry` gains its tag set here, not at 0.1.0. Additive (DESIGN §7):
 absent reads as the empty set — which is exactly what every entry written before
 this release is. Unlike 0.11.0's Card-vs-Note default, there is no wrong answer available here.
 
@@ -221,7 +221,7 @@ at 0.1.0, not here.
 **Absent must read as Card, and this is the first time that choice has a wrong answer.** Entries
 written 0.1.0–0.10.0 used title-as-prompt, which *is* a Card; if absent defaults to Note, every
 entry ever written silently changes how it is presented. Scheduling is untouched either way —
-DESIGN §2's invariant guarantees that — which is exactly why it could ship unnoticed. 
+DESIGN §2's invariant guarantees that — which is exactly why it could ship unnoticed.
 
 **Open before building this:** whether Notes should ever allow a pure re-read mode, against the
 current recall-first default (DESIGN §12). This is the release that forces it.
@@ -258,9 +258,10 @@ having one.
 The picker reads `profile.json` only, never the payload (DESIGN §7), which is what keeps it
 working unchanged if encryption ever arrives.
 
-**Open before building this:** the on-disk layout for multiple profiles. DESIGN §7 has settled
-part of it — profiles are sibling folders, since the pre-restore copy lands beside them — so what
-remains is naming, discovery and where the default profile sits. Separately, where app-wide
+**Open before building this:** the on-disk layout for multiple profiles. Most of it is settled:
+profiles are sibling folders, since the pre-restore copy lands beside them (DESIGN §7), and the
+default profile has lived at `profiles/default/` since 0.1.0 (ARCHITECTURE). What remains is how
+further profiles' folders are named and how the picker finds them. Separately, where app-wide
 settings live is still open (DESIGN §12); they have no home in the payload, which lists entries,
 history and DayLogs only.
 
@@ -270,8 +271,8 @@ history and DayLogs only.
 `profile.json`, `payload.json` and `attachments/` — and the app's job is to help the user find or
 produce it rather than making them hunt through app-data folders (DESIGN §7).
 
-**Open before building this:** the profile folder also holds `recovery/` (DESIGN §7). Whether a
-backup carries it is undecided; nothing depends on it before this release.
+**Open before building this:** whether a backup carries the profile's `recovery/` folder
+(DESIGN §12).
 
 **Bringing a file in is three paths, not one, and the app cannot tell which the user meant.** So
 it asks, in the user's words rather than the format's (DESIGN §7):
@@ -424,15 +425,10 @@ entry's created-day. Here the calendar is the trigger and the day is the subject
 surface entries nowhere near ready — and days with no entries at all, just a journal.
 
 The second bullet needs its own defence, because the underlying set *can* shrink. It survives on
-one condition: **it is rendered as a list of specific entries, never as a score.** A count of the
-items shown is fine — it describes the list in front of you. What fails is a **denominator or a
-comparison over time**: "you still know 12 of your 40 entries from 2026" is a score, and a bad
-week makes it 9. Same words, different feature. That distinction is a general rule rather than a
-fact about this screen, and belongs in DESIGN §5 beside the can-it-decrease test — it is what any
-future display will need.
-
-DESIGN §5 states that rule generally — a count describes a 
-list, a denominator or a comparison over time is a score.
+one condition: **it is rendered as a list of specific entries, never as a score.** "You still
+know 12 of your 40 entries from 2026" is a score, and a bad week makes it 9 — same words,
+different feature. DESIGN §5 states the general rule: a count describes a list, a denominator
+or a comparison over time is a score.
 
 *"Still know" is undefined and has to be pinned before this ships.* Currently in box 4 or 5? Never
 failed? Passed most recently? Each produces a different list, and the third shrinks most

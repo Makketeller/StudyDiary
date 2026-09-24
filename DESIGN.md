@@ -313,9 +313,9 @@ exists to protect. Reopen if a real user asks, not preemptively.
 
 Backup must be trivial and restore must be *even easier* — an explicit MVP goal.
 
-- **The data is one folder per user**, containing the two JSON files described below,
+- **The data is one folder per profile**, containing the two JSON files described below,
   a `recovery/` folder of the app's own copies, and an `attachments/` folder once images ship.
-  Backup = copy  that folder somewhere safe. The app
+  Backup = copy that folder somewhere safe. The app
   helps the user find or produce it — a "reveal my
   data" action, an export action — rather than making them hunt through app-data folders.
 - **Import COPIES, never moves, by default.** Moving would silently delete the user's only
@@ -390,7 +390,7 @@ everything is the separately-named backup action, not an option on the same dial
 only ever removes entries from a share; it is never a route to adding anything the table above
 excludes.
 
-**A share file is read, never written back.** The refusal in the schema policy above exists
+**A share file is read, never written back.** The schema policy below refuses a newer file
 because an app saves its own files over themselves, and a share is not one of those: importing
 reads it once and creates new entries. So an app meeting a share written by a newer version
 imports what it understands and says what it could not — an entry arriving without its tags is a
@@ -674,8 +674,8 @@ backlog, which shrinks by being used and is never counted at you.
 Genuinely open. Items settled elsewhere have been removed rather than left here looking
 undecided — if it appears below, no decision exists yet.
 
-- **Name** for the app (the code name `StudyDiary` is settled). *Needed by 1.0 at the latest*,
-  since that is the version handed to a stranger, and renaming a public repo's product identity
+- **Name** for the app (the code name `StudyDiary` is settled). *Needed before the app is handed
+  to a stranger*, since renaming a public repo's product identity 
   gets more expensive with every user.
 - **Where does `session cap` live?** It has no home in the file format — §7's payload lists
   entries, history and DayLogs only. It is a serving concern rather than a scheduling one, so
@@ -709,6 +709,11 @@ undecided — if it appears below, no decision exists yet.
 - **How many recovery copies, and when they are taken.** A copy at every save means recovering
   loses nothing, but a bug in the app gets copied too; a copy per session survives a bug, but
   recovering from it loses that session. Probably some of each. Due before the store is written.
+- **Does a backup carry `recovery/`?** §7 defines a backup as the whole folder, and the folder
+  holds the app's own recovery copies. Carrying them makes a backup bigger and brings old copies
+  into the restored profile; leaving them out makes "the whole folder" not quite true. Nothing
+  depends on it before backup ships.
+
 ---
 
 ## 13. Reversals
