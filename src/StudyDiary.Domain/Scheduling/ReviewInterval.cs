@@ -15,18 +15,34 @@ namespace StudyDiary.Domain.Scheduling;
 /// </summary>
 public sealed record ReviewInterval(int Count, IntervalUnit Unit)
 {
-    private readonly int _count = Validated(Count);
-    
+    private readonly int _count = ValidatedCount(Count);
+    private readonly IntervalUnit _unit = ValidatedUnit(Unit);
+
     public int Count
     {
         get => _count;
-        init => _count = Validated(value);
+        init => _count = ValidatedCount(value);
     }
 
-    private static int Validated(int count)
+    public IntervalUnit Unit
+    {
+        get => _unit;
+        init => _unit = ValidatedUnit(value);
+    }
+
+    private static int ValidatedCount(int count)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(count);
         return count;
+    }
+
+    private static IntervalUnit ValidatedUnit(IntervalUnit unit)
+    {
+        if (!Enum.IsDefined(unit))
+            throw new ArgumentOutOfRangeException(
+                nameof(unit), unit, "Unknown interval unit.");
+        
+        return unit;
     }
 
     /// <summary>Advance a whole-day date by this interval.</summary>
@@ -35,6 +51,7 @@ public sealed record ReviewInterval(int Count, IntervalUnit Unit)
         IntervalUnit.Day   => date.AddDays(Count),
         IntervalUnit.Month => date.AddMonths(Count),
         IntervalUnit.Year  => date.AddYears(Count),
+        // Construction rejects unknown units; the compiler still wants this arm.
         _ => throw new ArgumentOutOfRangeException(nameof(Unit), Unit, "Unknown interval unit.")
     };
 }
