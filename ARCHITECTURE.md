@@ -8,7 +8,7 @@
 >  **never with a section number** — this file renumbers whenever the code moves.
 > It points at nothing else: not ROADMAP.md, which changes per release, and not STATUS.md, which
 > changes every session.
-> If a rule here can only be stated with a release number 
+> If a rule here can only be stated with a release number
 > attached, the rule belongs in ROADMAP.md.
 
 ---
@@ -259,6 +259,13 @@ validated when first set. Any future record with a validated member inherits the
 obligation, including a round-trip test that a constructor argument survives to its
 property. That test is the only thing that catches CS8907 becoming a silent default.
 
+**An enum-typed member is validated too.** An enum is an integer underneath, so
+`(ReviewOutcome)99` is a legal C# value that names no member, and nothing stops it unless
+something checks. A record with an enum member checks it with `Enum.IsDefined`, through the same
+two entry points. A `switch` over that member keeps its discard arm anyway: the compiler asks for
+one, and it now guards a state that construction already forbids. The round-trip test for an enum
+member uses a member other than the one pinned to 0, since 0 is what a silent default produces.
+
 ### Dates and time
 
 **Whole-day dates use `DateOnly`, never `DateTime`.** DESIGN §3 says scheduling is whole-day; using a
@@ -290,9 +297,9 @@ shared static instance; `IReadOnlyList` is only a read-only *view*, so anyone ho
 on first use.)
 
 **Value objects validate on construction, and validation lives where the rule is uniform.**
-`LeitnerLadder` rejects a `default` or empty `BoxIntervals` and any interval with
-`Count <= 0`. `ReviewInterval` permits `Count >= 0`, rejecting only negatives (DESIGN §3).
-Both follow the two-entry-point pattern above.
+`LeitnerLadder` rejects a `default` or empty `BoxIntervals`, a null interval, and any interval
+with `Count <= 0`. `ReviewInterval` permits `Count >= 0`, rejecting only negatives (DESIGN §3),
+and rejects a `Unit` that names no member. All of it follows the two-entry-point pattern above.
 
 The split is not arbitrary. `ReviewInterval` is a general span of whole days, months or years, and
 zero is arithmetically meaningful on a span — `AddTo` simply returns the same date. Positivity is a
@@ -491,7 +498,7 @@ profile is created or renamed.
 to an existing type is optional: never `[JsonRequired]`, and its absence never throws
 (DESIGN §7). Every other property is `[JsonRequired]` — everything the first release writes, and
 every property of a type that did not exist before. A missing required key makes the reader throw
-a `JsonException`, and the store treats that exactly like a payload that will not parse. 
+a `JsonException`, and the store treats that exactly like a payload that will not parse.
 `schemaVersion` bumps with every minor and major release (DESIGN §7).
 
 The attribute rather than the C# `required` keyword. The serializer treats the two the same, but
@@ -523,7 +530,10 @@ pasted into two entries writes two files with two ids — no deduplication, no r
 code path deletes an attachment automatically, ever.
 
 **Enums serialize as strings** (`JsonStringEnumConverter`) while persistence is JSON: it sidesteps
-the reordering hazard and keeps the file readable by eye. Pin the integers anyway (§4) — it is the
+the reordering hazard and keeps the file readable by eye. Construct it with
+`allowIntegerValues: false`: by default it also reads plain integers, including
+ones no member has, so `"outcome": 99` would load (checked 2026-09). The types still check (§4),
+because the converter is not the only way a value gets in. Pin the integers anyway (§4) — it is the
 pinning that makes any later move to a numeric store safe rather than a silent reinterpretation of
 every row.
 
