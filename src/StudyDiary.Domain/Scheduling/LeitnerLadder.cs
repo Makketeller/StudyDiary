@@ -33,8 +33,11 @@ public sealed record LeitnerLadder(ImmutableArray<ReviewInterval> BoxIntervals)
                 "A ladder needs at least one box.", nameof(boxIntervals));
 
         foreach (var interval in boxIntervals)
+        {
+            ArgumentNullException.ThrowIfNull(interval, nameof(boxIntervals));
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(
                 interval.Count, nameof(boxIntervals));
+        }    
         
         return boxIntervals;
     }
