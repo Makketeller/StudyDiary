@@ -485,6 +485,14 @@ own integer rather than a copy of the app version, because minors restart at eve
   and it is refused like one that will not parse. So every property the first release writes is
   required, and so is every property of an object that did not exist before — a DayLog without
   its id is damaged, whichever release introduced DayLogs.
+- **A key the app does not know is damage, not something to skip.** Skipping it would drop it
+  at the next save, which is the silent field-dropping this section forbids. It arrives through
+  the one door the version check cannot see: the version lives in `profile.json`, so a
+  `payload.json` copied on its own from a newer install arrives unchecked. A key given twice is
+  refused for the same reason, since keeping one copy drops the other. The cost falls on
+  hand-edits: a key added by hand stops the file opening, and the recovery path below is what
+  makes that survivable. A key the app deleted without saying so would be worse, because the
+  user would believe it had been kept.
 - **An app refuses every file above its own `schemaVersion`.** It says so and refuses to write,
   rather than loading a partial object and saving it back with the unknown fields dropped.
   Silent field-dropping on save is the one way a local-first app destroys data it was trusted
@@ -495,7 +503,9 @@ own integer rather than a copy of the app version, because minors restart at eve
   some files it could have read, which only matters when a file moves between versions.
 - **A change that is not additive needs migration code.** Renaming, re-typing or repurposing a
   field means an older file no longer reads correctly as *absent → default*, so the newer app
-  has to convert it. That code lives in `StudyDiary.Data` behind `IEntryStore` — never in
+  has to convert it.
+  Removing a field counts too: an older file still carries the key, and the rule above would
+  refuse it. That code lives in `StudyDiary.Data` behind `IEntryStore` — never in
   Domain, which has no idea files exist.
 - **Hand-edited files are expected, and the failure mode depends on what broke.** The format is
   readable on purpose and "reveal my data" is a shipped action, so someone will eventually move,
@@ -544,6 +554,9 @@ the app keeps its own copies and offers one back.
 - **Newer is not damaged.** A file whose `schemaVersion` is higher than the app understands gets
   its own message (above) and is never offered a copy — restoring one would silently throw away
   everything the newer version wrote.
+  That is why the version is read before anything else is checked:
+  a newer file carries keys this app has never seen, and judged by
+  the unknown-key rule it would look damaged.
 - **The app may delete its own older recovery copies, and nothing else.** The one exception to
   nothing being deleted automatically, and narrow on purpose: a recovery copy is a file the app
   made for itself and the user never placed, and it is only removed once newer ones exist. The
@@ -675,7 +688,7 @@ Genuinely open. Items settled elsewhere have been removed rather than left here 
 undecided — if it appears below, no decision exists yet.
 
 - **Name** for the app (the code name `StudyDiary` is settled). *Needed before the app is handed
-  to a stranger*, since renaming a public repo's product identity 
+  to a stranger*, since renaming a public repo's product identity
   gets more expensive with every user.
 - **Where does `session cap` live?** It has no home in the file format — §7's payload lists
   entries, history and DayLogs only. It is a serving concern rather than a scheduling one, so
@@ -709,6 +722,10 @@ undecided — if it appears below, no decision exists yet.
 - **How many recovery copies, and when they are taken.** A copy at every save means recovering
   loses nothing, but a bug in the app gets copied too; a copy per session survives a bug, but
   recovering from it loses that session. Probably some of each. Due before the store is written.
+- **Does the refusal message say what broke?** §7's message says the diary could not be opened,
+  not why. For someone who edited the file by hand, the line and key that broke it turn a
+  lockout into a quick fix, and the reader already knows both. Whether the dialog shows that
+  detail, and how plainly, is undecided. Due before the recovery dialog is built.
 - **Does a backup carry `recovery/`?** §7 defines a backup as the whole folder, and the folder
   holds the app's own recovery copies. Carrying them makes a backup bigger and brings old copies
   into the restored profile; leaving them out makes "the whole folder" not quite true. Nothing

@@ -481,8 +481,26 @@ practice makes the second call and not the first, and never calls the scheduler 
 result equals what went in. A field added to a Domain type and forgotten in the mapping is silent
 data loss otherwise.
 
+**Serialization is source-generated, through one shared `JsonSerializerOptions`.** Data holds
+exactly one options instance, and every read and write passes through it. Its resolver is a
+generated `JsonSerializerContext` naming the two root DTOs, and nothing else: no reflection
+fallback. Reflection-based serialization is switched off in a trimmed app (checked 2026-09), and
+`dotnet test` never trims, so reflection would pass every test and throw only in a published
+binary. With the context as the only resolver, a type nobody registered throws in a test
+instead. Whether a release is published trimmed is then a packaging choice, not a rewrite.
+Metadata mode only: the fast path serializes but never deserializes, buys throughput a diary
+does not need, and would have reads and writes running different generated code.
+
 **JSON keys are camelCase** (`JsonNamingPolicy.CamelCase`), matching DESIGN §7's field names, while
 C# properties stay PascalCase. Set once in the shared `JsonSerializerOptions`.
+
+**The file is written to be read by eye** (DESIGN §1). Indented, and escaped with
+`JavaScriptEncoder.UnsafeRelaxedJsonEscaping`: the default encoder writes every non-ASCII
+character as a `\u` code, and the all-languages encoder still escapes `&`, `<` and `>`, which
+markdown, maths and code use constantly. "Unsafe" means unsafe inside an HTML page, and this file
+never goes into one — so these options are never reused for anything that does. Two things no
+setting changes: a line break inside a string is always `\n`, which JSON requires, and emoji are
+still escaped (checked 2026-09). Both read back correctly; they only look worse.
 
 **Atomic write-then-replace now covers two files, not one.** Write to a temporary file in the same
 directory, then replace (`File.Move(tmp, target, overwrite: true)`). Truncating the real file first
@@ -502,13 +520,30 @@ a `JsonException`, and the store treats that exactly like a payload that will no
 `schemaVersion` bumps with every minor and major release (DESIGN §7).
 
 The attribute rather than the C# `required` keyword. The serializer treats the two the same, but
-the keyword does not compile under `System.Text.Json` source generation (checked 2026-09), and
-the attribute keeps source generation available if trimming ever makes it necessary.
+the keyword does not compile under `System.Text.Json` source generation (checked 2026-09),
+and this project serializes through source generation (above).
 
 **Refuse to write rather than write a partial object.** Two cases, one rule: a `schemaVersion` higher
 than this app understands, and a payload that will not parse. Say so, name the file, and do not save.
 Silent field-dropping on save is the one way a local-first app destroys the data it was trusted with.
 Only the second case then offers a recovery copy: a newer file is not damaged (DESIGN §7).
+
+**A key the reader does not know is damage, and so is a key given twice.** The options set
+`UnmappedMemberHandling = Disallow` and `AllowDuplicateProperties = false`, so either makes the
+reader throw a `JsonException` (checked 2026-09), and the store treats it exactly like a payload
+that will not parse. The defaults skip an unknown key and keep the last of two, and a skipped key
+is gone at the next save (DESIGN §7). One consequence: removing a field is no longer free. An
+older file still carries the key, so the DTO keeps the property, read and ignored, or migration
+code removes it. `dayLogs` is held as raw JSON until DayLog exists, so nothing inside it is
+checked or dropped; its DTO is checked like any other once it exists.
+A share file is the exception (DESIGN §7): it is read once and never written back, so an
+unknown key in one is skipped and reported, not refused. A duplicate key is still damage.
+
+**The version is read before anything is read strictly.** A newer file carries keys this app has
+never seen, so a strict read would call it damaged and offer a recovery copy, which DESIGN §7
+forbids for a newer file. The store reads `schemaVersion` from `profile.json` on its own first:
+above this app's, it refuses with the newer-version message; otherwise it reads both files
+strictly.
 
 **"No profile yet" and "a profile that will not load" never share a code path.** The first is a
 first run and creates a profile. The second never does: it refuses, copies the damaged file
@@ -529,8 +564,13 @@ ever resolves through it.
 pasted into two entries writes two files with two ids — no deduplication, no reference counting. No
 code path deletes an attachment automatically, ever.
 
-**Enums serialize as strings** (`JsonStringEnumConverter`) while persistence is JSON: it sidesteps
-the reordering hazard and keeps the file readable by eye. Construct it with
+**Enums serialize as strings** (`JsonStringEnumConverter<TEnum>`) while persistence is JSON: it
+sidesteps the reordering hazard and keeps the file readable by eye. The generic form, one per
+persisted enum, because the non-generic converter cannot be used with source generation (checked
+2026-09). That leaves a trap: an enum with no converter is written as its integer, and a
+round-trip test still passes, because an integer round-trips fine. So a test asserts the written
+text of every persisted enum — `"outcome": "Pass"` — and that test is what catches a missing
+converter. Construct each with
 `allowIntegerValues: false`: by default it also reads plain integers, including
 ones no member has, so `"outcome": 99` would load (checked 2026-09). The types still check (§4),
 because the converter is not the only way a value gets in. Pin the integers anyway (§4) — it is the
