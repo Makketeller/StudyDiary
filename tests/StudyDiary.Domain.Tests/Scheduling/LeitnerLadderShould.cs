@@ -41,7 +41,7 @@ public class LeitnerLadderShould
             new ReviewInterval(1, IntervalUnit.Day)
         ]);
 
-        Assert.NotEqual(a, b);        
+        Assert.NotEqual(a, b);
     }
 
     [Fact]
@@ -58,18 +58,20 @@ public class LeitnerLadderShould
         ]);
 
         var ladders = new HashSet<LeitnerLadder> { a, b };
-        Assert.Single(ladders);  
+        Assert.Single(ladders);
     }
 
     [Fact]
     public void PreserveIntervalsGivenToConstructor()
     {
-        var ladder = new LeitnerLadder([
-            new ReviewInterval(1, IntervalUnit.Month),
-            new ReviewInterval(5, IntervalUnit.Year)
-        ]);
+        var first = new ReviewInterval(1, IntervalUnit.Month);
+        var second = new ReviewInterval(5, IntervalUnit.Year);
 
-        Assert.Equal(2, ladder.MaxBox);
+        var ladder = new LeitnerLadder([first, second]);
+
+        Assert.Collection(ladder.BoxIntervals,
+            interval => Assert.Equal(first, interval),
+            interval => Assert.Equal(second, interval));
     }
 
     [Fact]
@@ -81,6 +83,40 @@ public class LeitnerLadderShould
     public void RejectEmptyBoxIntervals() =>
         Assert.Throws<ArgumentException>(
             () => new LeitnerLadder([]));
+
+    [Theory]
+    [InlineData(1, 1, IntervalUnit.Day)]
+    [InlineData(2, 7, IntervalUnit.Day)]
+    [InlineData(3, 1, IntervalUnit.Month)]
+    [InlineData(4, 6, IntervalUnit.Month)]
+    [InlineData(5, 1, IntervalUnit.Year)]
+    public void GiveEachDefaultBoxTheIntervalFromTheDesign(
+        int box, int count, IntervalUnit unit) =>
+        Assert.Equal(
+            new ReviewInterval(count, unit),
+            LeitnerLadder.Default.IntervalForBox(box));
+
+    [Fact]
+    public void HaveFiveBoxesByDefault() =>
+        Assert.Equal(5, LeitnerLadder.Default.MaxBox);
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void RejectABoxBelowOne(int box) =>
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => LeitnerLadder.Default.IntervalForBox(box));
+
+    [Fact]
+    public void RejectABoxAboveTheCap() =>
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => LeitnerLadder.Default.IntervalForBox(
+                LeitnerLadder.Default.MaxBox + 1));
+
+    [Fact]
+    public void RejectANullInterval() =>
+        Assert.Throws<ArgumentNullException>(
+            () => new LeitnerLadder([null!]));
 
     [Fact]
     public void RejectZeroCountInterval() =>

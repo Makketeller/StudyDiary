@@ -46,6 +46,30 @@ public class ReviewIntervalShould
     }
 
     [Fact]
+    public void PreserveUnitGivenToConstructor()
+    {
+        var interval = new ReviewInterval(7, IntervalUnit.Month);
+
+        Assert.Equal(IntervalUnit.Month, interval.Unit);
+    }
+
+    [Theory]
+    [InlineData(3)]
+    [InlineData(-1)]
+    public void RejectAnUnknownUnit(int unit) =>
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new ReviewInterval(1, (IntervalUnit)unit));
+
+    [Fact]
+    public void RejectAnUnknownUnitViaWith()
+    {
+        var valid = new ReviewInterval(7, IntervalUnit.Day);
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => valid with { Unit = (IntervalUnit)3 });
+    }
+
+    [Fact]
     public void AddMonthsAsCalendarMonths()
     {
         var interval = new ReviewInterval(1, IntervalUnit.Month);
