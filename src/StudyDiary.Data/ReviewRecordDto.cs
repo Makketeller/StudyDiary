@@ -13,9 +13,10 @@ namespace StudyDiary.Data;
 
 /// <summary>
 /// <see cref="ReviewRecord"/> as it sits on disk: settable
-/// properties, built empty and filled in. Lenient on purpose, so a bad
-/// value in a hand-edited file fails in the mapping, where the file and
-/// entry can be named, not inside the JSON reader.
+/// properties, built empty and filled in. The reader refuses an outcome
+/// that is not a member name, as it refuses any unknown or repeated key
+/// (ARCHITECTURE). A box number below one still parses, and fails in the
+/// mapping, where the file and entry can be named.
 /// </summary>
 internal sealed class ReviewRecordDto
 {
