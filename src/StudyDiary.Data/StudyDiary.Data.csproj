@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\StudyDiary.Domain\StudyDiary.Domain.csproj" />
+    <InternalsVisibleTo Include="StudyDiary.Data.Tests" />
   </ItemGroup>
 
   <PropertyGroup>
