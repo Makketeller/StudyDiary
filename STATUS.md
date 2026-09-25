@@ -1,4 +1,4 @@
-**Last updated:** 2026-09-24 · **Version:** pre-0.1.0 · **Repo:** 67 commits, public, GPLv3.
+**Last updated:** 2026-09-25 · **Version:** pre-0.1.0 · **Repo:** 71 commits, public, GPLv3.
 
 ## Exists and is committed
 
@@ -13,15 +13,15 @@
 - `StudyDiary.Data` holds `ReviewRecord`, tested by `ReviewRecordShould`, and five
   DTOs: `ReviewStateDto`, `ReviewRecordDto`, `ProfileDto`, `EntryDto`, `PayloadDto`.
   Every property on every DTO is `[JsonRequired]`.
-- **Tests: xUnit v3 — 64 tests, all green. 64 green is the environment
-  benchmark.** No test covers the DTOs; they have no behaviour, and the
-  round-trip tests arrive with the mapping.
+- `StudyDiary.Data` also holds the shared JSON options: `StudyDiaryJson`, bound to the
+  source-generated `StudyDiaryJsonContext`, tested by `StudyDiaryJsonShould`.
+- **Tests: xUnit v3 — 100 tests, all green. 100 green is the environment
+  benchmark.** No round-trip test yet; it arrives with the mapping.
 - The four documents: DESIGN.md, ARCHITECTURE.md, ROADMAP.md and this file.
 - `LICENSE`, `README.md`, `.gitmessage`.
 
 ## Does not exist yet
 
-- The shared `JsonSerializerOptions` — camelCase keys, enums as strings.
 - The Domain ↔ DTO mapping, by hand, both directions.
 - `IEntryStore` and its JSON implementation. No file is read or written yet.
 - Recovery copies: decided and documented, but nothing takes one.
@@ -43,32 +43,14 @@ there, not here.
 
 ## Decided this session
 
-This session's decisions are recorded in DESIGN §7 and §13,
-and in ROADMAP 0.1.0 and 0.14.0.
-
-Enums held by records are validated with `Enum.IsDefined`, a null ladder
-interval is refused, and the enum converter will read names only, all
-recorded in ARCHITECTURE. DESIGN §12 gained one open question: whether a
-backup carries `recovery/`.
+The shared JSON options: source generation, relaxed escaping with indentation, and a
+strict reader that refuses unknown and duplicate keys, with `schemaVersion` read first.
+Recorded in ARCHITECTURE §5 and DESIGN §7. DESIGN §12 gained one open question:
+whether the refusal message says what broke.
 
 ## Next session targets
 
-**The shared `JsonSerializerOptions`, then the mapping, then `IEntryStore`.**
-
-Open before the options:
-
-- **Reflection or source generation.** `JsonSerializer` inspects types at runtime by default,
-  which is disabled under trimming and native AOT — as a scratch script proved, since file-based
-  apps are AOT by default. Source generation works in both. Nothing forces the choice yet, but
-  0.1.0's publishing settings do, and the store is easier to write once than twice.
-- **Non-ASCII escaping.** Default settings write `å`, `ö` and `μ` as `\u00E5`-style escapes,
-  which fights DESIGN §1's human-readable promise. There is an encoder setting; check the docs.
-- **Unknown keys.** By default the reader skips keys it doesn't know, so a
-  payload.json copied alone from a newer install loads and loses its new
-  fields on the next save; the version check only sees profile.json.
-  `JsonUnmappedMemberHandling.Disallow` refuses instead. Must ship in 0.1.0,
-  since it protects the older app. Read `schemaVersion` before parsing
-  strictly, or a newer header reads as damaged. If adopted, it is a DESIGN §7 rule too: a hand-added key would then get the file refused.
+**The mapping, then `IEntryStore`.**
 
 Open before `JsonEntryStore`:
 
@@ -82,6 +64,8 @@ Open before `JsonEntryStore`:
   as the App-layer `TimeProvider`.
 - **Who owns `profile.json`.** The five `IEntryStore` methods are all about entries, but the
   header has to be created on first run and read before the payload.
+- **How `schemaVersion` is read first.** The shared options refuse unknown keys, so reading
+  the version from a newer header needs its own lenient read of that one field.
 - **A file that parses but holds a bad value** — refuse the whole file, or skip that entry and
   load the rest? Refusing matches the parse-failure rule, and recovery copies now remove its main
   cost, which was the lockout.
@@ -92,11 +76,7 @@ Watch for, when writing the mapping:
 
 - Domain types are never serialized directly; Data maps Domain ↔ DTO by hand, both directions,
   and the round-trip test is what catches a forgotten field.
+- Read and write only through `StudyDiaryJson.Context`, never `StudyDiaryJsonContext.Default`.
 - The temp file for the atomic write goes in the same directory as its target.
 - The header/payload split: `profile.json` carries `schemaVersion`, id, name, `encryption`;
   `payload.json` carries entries, history and DayLogs.
-- The enum converter is built with `allowIntegerValues: false` (ARCHITECTURE).
-  That makes `ReviewRecordDto`'s summary half-wrong, since outcomes now fail
-  in the reader, not the mapping. Amend it in the same commit.
-- A load test with `"outcome": 99`, and with `"outcome": "99"`, asserts the
-  file is refused.
