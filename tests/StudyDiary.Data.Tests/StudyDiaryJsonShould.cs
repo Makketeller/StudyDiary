@@ -9,6 +9,7 @@
 using StudyDiary.Data;
 using StudyDiary.Domain.Scheduling;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace StudyDiary.Data.Tests;
 
@@ -56,6 +57,9 @@ public class StudyDiaryJsonShould
     private static string WritePayload(PayloadDto payload) =>
         JsonSerializer.Serialize(payload, StudyDiaryJson.Context.PayloadDto);
 
+    private static ProfileDto? ReadProfile(string json) =>
+        JsonSerializer.Deserialize(json, StudyDiaryJson.Context.ProfileDto);
+
     private static PayloadDto? ReadPayload(string json) =>
         JsonSerializer.Deserialize(json, StudyDiaryJson.Context.PayloadDto);
 
@@ -76,6 +80,15 @@ public class StudyDiaryJsonShould
     [InlineData("it's")]
     public void WriteTextAsItself(string text) =>
         Assert.Contains($"\"name\": \"{text}\"", WriteProfile(AProfileNamed(text)));
+
+    [Fact]
+    public void ReadAValidProfile()
+    {
+        var profile = ReadProfile(WriteProfile(AProfileNamed("Default")));
+
+        Assert.NotNull(profile);
+        Assert.Equal("Default", profile.Name);
+    }
 
     [Fact]
     public void ReadAValidPayload()
@@ -128,6 +141,41 @@ public class StudyDiaryJsonShould
             $"\"outcome\": {outcome}");
 
         Assert.ThrowsAny<JsonException>(() => ReadPayload(json));
+    }
+
+    [Theory]
+    [InlineData("title")]
+    [InlineData("body")]
+    [InlineData("reviewState")]
+    [InlineData("reviewHistory")]
+    public void RefuseAnEntryWithANullValue(string key)
+    {
+        var node = JsonNode.Parse(ValidPayload)!;
+        node["entries"]![0]![key] = null;
+
+        Assert.ThrowsAny<JsonException>(() => ReadPayload(node.ToJsonString()));
+    }
+
+    [Theory]
+    [InlineData("entries")]
+    [InlineData("dayLogs")]
+    public void RefuseAPayloadWithANullList(string key)
+    {
+        var node = JsonNode.Parse(ValidPayload)!;
+        node[key] = null;
+
+        Assert.ThrowsAny<JsonException>(() => ReadPayload(node.ToJsonString()));
+    }
+
+    [Theory]
+    [InlineData("name")]
+    [InlineData("encryption")]
+    public void RefuseAProfileWithANullValue(string key)
+    {
+        var node = JsonNode.Parse(WriteProfile(AProfileNamed("Default")))!;
+        node[key] = null;
+
+        Assert.ThrowsAny<JsonException>(() => ReadProfile(node.ToJsonString()));
     }
 
     [Fact]
