@@ -16,7 +16,8 @@ namespace StudyDiary.Data;
 /// <summary>
 /// The one set of rules every read and write of a profile's files goes
 /// through (ARCHITECTURE): camelCase keys, readable text, enums by name,
-/// and a strict reader that refuses an unknown or repeated key.
+/// and a strict reader that refuses an unknown or repeated key, or a null
+/// where the type forbids one.
 /// </summary>
 internal static class StudyDiaryJson
 {
@@ -32,6 +33,7 @@ internal static class StudyDiaryJson
         WriteIndented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+        RespectNullableAnnotations = true,
         AllowDuplicateProperties = false,
         Converters =
         {
