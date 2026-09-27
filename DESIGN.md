@@ -514,8 +514,10 @@ own integer rather than a copy of the app version, because minors restart at eve
   it, and nothing rewrites the payload to "clean up" a reference the user may be about to
   restore. A **payload that will not parse** is the opposite case: the app says so, names the
   file, and **refuses to write**, for the same reason a newer file is refused. Partial load
-  followed by a save is how a local-first app destroys the data it was trusted with. The app then
-  offers a recovery copy (below).
+  followed by a save is how a local-first app destroys the data it was trusted with. A payload
+  that parses but describes something impossible — an entry in box 0, one with neither title
+  nor body, two entries sharing an id — is refused the same way, because skipping the bad entry
+  and loading the rest is exactly that partial load. The app then offers a recovery copy (below).
 
 ### Recovering from a damaged file
 
