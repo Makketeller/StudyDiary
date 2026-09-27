@@ -539,6 +539,17 @@ checked or dropped; its DTO is checked like any other once it exists.
 A share file is the exception (DESIGN §7): it is read once and never written back, so an
 unknown key in one is skipped and reported, not refused. A duplicate key is still damage.
 
+**A null where the type forbids one is damage too.** `[JsonRequired]` only asks that the key be
+there, so `"reviewState": null` passes it. The options set `RespectNullableAnnotations = true`, so
+the reader throws a `JsonException` for a null in any property whose type does not allow one, and
+the store treats it like a payload that will not parse (checked 2026-09). The same setting refuses
+to write a null, which is the refuse-to-write rule above applied to one field. A property that may
+legitimately be null says so in its type (`string?`). Absence is unaffected: the setting checks
+values that are present, never keys that are missing, so absent-reads-as-default still holds. It
+cannot see two places, and code covers both: a null inside a list, such as `"entries": [null]`, is
+left to the mapping, and a file that is only `null` to the store. A null inside `dayLogs` is raw
+JSON and passes through untouched, like everything else there.
+
 **The version is read before anything is read strictly.** A newer file carries keys this app has
 never seen, so a strict read would call it damaged and offer a recovery copy, which DESIGN §7
 forbids for a newer file. The store reads `schemaVersion` from `profile.json` on its own first:
