@@ -481,6 +481,25 @@ practice makes the second call and not the first, and never calls the scheduler 
 result equals what went in. A field added to a Domain type and forgotten in the mapping is silent
 data loss otherwise.
 
+**Entry → DTO takes the review history as an argument.** `Entry` has no history, so the mapping
+cannot know it; a DTO built from the entry alone would save with an empty history and erase the
+entry's reviews. So the mapping requires it: a new entry passes an empty list, an update passes
+the history of the DTO it replaces, which the store holds in memory. The mapping always builds a
+fresh DTO rather than copying fields into the old one. Copying in place keeps the history too,
+but a field someone forgets to copy keeps its old value and looks right in every test that does
+not change it; in a fresh DTO the forgotten field comes out empty, and the round-trip test fails
+at once.
+
+**DTO → Entry goes through the Domain constructors, and what they refuse is damage.** A
+hand-edited entry is checked by the same rules as every other: a box below one, a both-blank
+entry, an empty id. The mapping catches the `ArgumentException` around each constructor call and
+throws a `JsonException` naming the entry by position and id, with the original kept as its
+inner exception, so the store has one signal for a damaged file and the detail is there if the
+refusal message ever shows it. It catches `ArgumentException` and nothing wider: anything else
+is a bug in this app, and must crash rather than be reported as damage and send the user to a
+recovery copy. The mapping also refuses what no constructor can see: a null inside a list, and
+two entries sharing an id, which would leave update and delete not knowing which one they mean.
+
 **Serialization is source-generated, through one shared `JsonSerializerOptions`.** Data holds
 exactly one options instance, and every read and write passes through it. Its resolver is a
 generated `JsonSerializerContext` naming the two root DTOs, and nothing else: no reflection
