@@ -531,6 +531,21 @@ degrades into copy-then-delete, which is the failure being avoided. In practice 
 almost never, so an ordinary save writes the payload alone; the two move together only when a
 profile is created or renamed.
 
+**A save reads its own temp file back before it replaces anything,** through the same strict
+read and mapping that opening a profile uses, so the live file has always passed the check it
+will face at the next open (DESIGN §7). The check is its own method, tested directly against
+hand-damaged files, because a correct writer can never reach its failure branch. A failure is a
+bug in this app, not damage, so the save wraps the `JsonException` in an
+`InvalidOperationException` and lets it go. The target is not replaced, the temp file is left
+as evidence for the next save to overwrite, and no `JsonException` ever leaves a save, so a bug
+cannot be mistaken for a damaged file.
+
+**A bug stops the app with a message, never a vanishing window.** Code that meets a bug does
+not catch it where it happens; the exception travels up to one last-resort handler in App,
+which says plainly what was not saved and that the diary file is unchanged, then closes.
+Carrying on is not offered, because memory and file no longer agree. This is what "crash"
+means everywhere in this file.
+
 **Absent reads as default, and only where an older file could lack the key.** A property added
 to an existing type is optional: never `[JsonRequired]`, and its absence never throws
 (DESIGN §7). Every other property is `[JsonRequired]` — everything the first release writes, and

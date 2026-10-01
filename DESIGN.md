@@ -535,6 +535,21 @@ the app keeps its own copies and offers one back.
   and `payload.json` taken together, so a copy of the payload *is* the payload for the two rules
   above: if the payload is ever encrypted, so are its copies. Attachments are not copied; a save
   never rewrites them, and a missing one already has its own answer.
+- **A copy is taken at every save, and two kinds are kept:** the newest twenty-five, and the
+  first copy of each of the last seven days the app was used. The newest copy alone means a
+  hand-edit loses nothing; twenty-five is more than one review session at the default cap,
+  which is twenty saves, because a review saves twice (ARCHITECTURE.md). The daily copies
+  reach back past a bug that has been writing for a while, which recent copies cannot, since a
+  bug copies itself into every copy taken after it starts. Days of use rather than calendar
+  days, so someone studying weekly reaches back seven weeks. The numbers are constants, not
+  format: changing them, or letting the user choose them, changes no file.
+- **A save never replaces the file with one the app cannot read back.** Each new file is read
+  back with the same check a profile faces when it opens, before it replaces the old one.
+  Failing that check is a bug in the app, not damage, so the app stops and says so in plain
+  words: the last change was not saved, and the diary file is unchanged. It does not carry on,
+  because what it holds in memory no longer matches the file. A bug that writes an unreadable
+  file then costs one change, not everything since it started. The check proves the file
+  readable, not right; the older copies are for that.
 - **When a profile will not load, the app offers the newest copy that does,** in plain words,
   saying when it was taken so the user knows what may be missing:
 
@@ -721,9 +736,6 @@ undecided — if it appears below, no decision exists yet.
   to the recipient's DayLogs for that day (§8), which is either a pleasant accident or a small lie
   about your own diary. The alternative — keeping the sender's date — links to DayLogs the
   recipient never wrote. Unexamined; nothing depends on it before shared import ships.
-- **How many recovery copies, and when they are taken.** A copy at every save means recovering
-  loses nothing, but a bug in the app gets copied too; a copy per session survives a bug, but
-  recovering from it loses that session. Probably some of each. Due before the store is written.
 - **Does the refusal message say what broke?** §7's message says the diary could not be opened,
   not why. For someone who edited the file by hand, the line and key that broke it turn a
   lockout into a quick fix, and the reader already knows both. Whether the dialog shows that

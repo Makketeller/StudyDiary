@@ -59,8 +59,6 @@ refusal with no way back is a lockout: the notes are intact and a non-technical 
 them. A copy that was never taken cannot be offered, so taking them starts with the first write,
 even though everything else about recovery waits for Data resilience, beyond 1.0.
 
-**Open before building this:** how many copies, and when they are taken (DESIGN §12).
-
 *Windows caveat:* the extra binary is one more `dotnet publish` line, but a Windows build that has
 never been launched on Windows is a claim, not a release. Either smoke-test it in a VM before
 tagging or mark it explicitly untested. Path handling must use `Path.Combine` throughout —
@@ -335,6 +333,9 @@ interval `Count > 0` — enforced *now* rather than when a settings UI exists, p
 release adds only the UI that surfaces the resulting error, not the rule. The session cap is the
 opposite: it is serving logic in the UI layer (DESIGN §4), so it has no domain rule and must not
 acquire one. Whatever bounds it is a UI concern and belongs here.
+
+**Recovery depth** (DESIGN §7) surfaces here too, with a floor: a setting that can reach zero
+switches recovery off and brings back the lockout it exists to prevent.
 
 This is where "intuitive like a new video game, not like default Anki" gets tested on someone who
 is not the author.
