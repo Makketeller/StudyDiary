@@ -749,6 +749,10 @@ undecided — if it appears below, no decision exists yet.
   holds the app's own recovery copies. Carrying them makes a backup bigger and brings old copies
   into the restored profile; leaving them out makes "the whole folder" not quite true. Nothing
   depends on it before backup ships.
+- **What does the app say when a save fails for a reason outside it?** A full disk or a denied
+  permission is neither damage nor a bug. Until this is answered it reaches the same
+  last-resort message as a bug, which is honest, since the atomic write leaves the file
+  unchanged, but it blames the app for the disk. Due before the first release.
 
 ---
 

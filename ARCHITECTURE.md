@@ -479,6 +479,18 @@ now, `AppendReviewAsync` for what happened to it. Data puts them in the same pla
 practice makes the second call and not the first, and never calls the scheduler at all — DESIGN
 §4's enforcement-by-absence, with nothing added to enforce it.
 
+**An id the store does not hold is a bug in the caller, and so is an id it already holds.**
+`UpdateAsync`, `DeleteAsync` and `AppendReviewAsync` throw `KeyNotFoundException` for an entry
+the store does not hold; `AddAsync` throws `InvalidOperationException` for one it already does.
+Nothing changes the files while the app runs (DESIGN §7), so a wrong id can only come from App,
+and the store cannot tell a harmless race from a bug. Doing nothing would turn every such bug
+into silent loss: an edit or a box move gone after a restart, a review record that can never be
+backfilled. The check runs before anything changes, so a refused call leaves memory, both files
+and the recovery copies untouched. Not `ArgumentException`, which the mapping turns into damage.
+The rule is part of the interface, written on it as `<exception>` documentation, and any second
+implementation keeps it. Every store call is awaited: an exception inside an un-awaited `Task`
+is never observed, which is the silent no-op this rule exists to prevent.
+
 **Round-trip tests verify the mapping.** `StudyDiary.Data.Tests` saves, reloads, and asserts the
 result equals what went in. A field added to a Domain type and forgotten in the mapping is silent
 data loss otherwise.
