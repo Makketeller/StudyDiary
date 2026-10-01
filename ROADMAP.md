@@ -89,6 +89,10 @@ obliges `modifiedAt` early: a field no code can write has undefined semantics, a
 absent-→-default here — on the cheapest field in the format, where getting it wrong costs nothing
 — is worth more than the consistency.
 
+**The first release to bump `schemaVersion`,** to 2 (DESIGN §7). From here every minor bumps it
+and nothing enforces that: a missed bump reopens the hole DESIGN §13 closed on 2026-09-22. Make
+the bump part of cutting every release.
+
 ### 0.3.0 — Tags.
 
 Free-form, many-to-many labels: `#chemistry`, `#german`, `#thermodynamics`. Non-exclusive, unlike

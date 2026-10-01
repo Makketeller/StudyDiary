@@ -504,7 +504,7 @@ two entries sharing an id, which would leave update and delete not knowing which
 
 **Serialization is source-generated, through one shared `JsonSerializerOptions`.** Data holds
 exactly one options instance, and every read and write passes through it. Its resolver is a
-generated `JsonSerializerContext` naming the two root DTOs, and nothing else: no reflection
+generated `JsonSerializerContext` naming the two root DTOs and the version probe, and nothing else: no reflection
 fallback. Reflection-based serialization is switched off in a trimmed app (checked 2026-09), and
 `dotnet test` never trims, so reflection would pass every test and throw only in a published
 binary. With the context as the only resolver, a type nobody registered throws in a test
@@ -588,9 +588,16 @@ JSON and passes through untouched, like everything else there.
 
 **The version is read before anything is read strictly.** A newer file carries keys this app has
 never seen, so a strict read would call it damaged and offer a recovery copy, which DESIGN §7
-forbids for a newer file. The store reads `schemaVersion` from `profile.json` on its own first:
-above this app's, it refuses with the newer-version message; otherwise it reads both files
-strictly.
+forbids for a newer file. So `profile.json`'s bytes are read once and passed over twice. First a
+probe: a DTO holding only `SchemaVersion`, marked
+`[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]`, which overrides the shared
+options for that one type and nothing else (checked 2026-10). Every other rule still applies, so
+a missing, repeated, null or non-integer version throws `JsonException` like any other damage,
+and a file that is only `null` is turned into one. Above this app's version, one constant in
+Data, the file is newer and refused without a copy; below 1 it is damage. Then the strict
+`ProfileDto` read, over the same bytes. `JsonDocument` is the obvious alternative and is not
+used: a wrong shape there throws `InvalidOperationException` or `KeyNotFoundException`, which
+this file treats as bugs, and the key name would be a loose string outside the naming policy.
 
 **Data owns `profile.json` outright; App sees outcomes, never the header.** `IEntryStore` has no
 open method, so it stays about entries. A store is made by one of two static factories on the

@@ -477,8 +477,10 @@ release changes the file. A patch never bumps it, since a patch is a bug fix onl
 own integer rather than a copy of the app version, because minors restart at every major and
 `schemaVersion` must only ever go up.
 
-- **`schemaVersion` is a single integer** at the top of `profile.json`, written from the first
-  release.
+- **`schemaVersion` is a single integer** at the top level of `profile.json`, starting at 1 in
+  the first release. It is the one key no release may ever rename, move or retype, because it
+  is how every older app learns that a file is newer than it: it is read on its own, before
+  anything else in the file is judged. A version below 1 was never written and is damage.
 - **An app reads every file at or below its own `schemaVersion`.** A property a later release
   added is read as *absent → default* when an older file lacks it, never as an error.
   `System.Text.Json` already does this; the rule is simply that such a property is never marked
