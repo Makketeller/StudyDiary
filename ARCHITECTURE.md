@@ -541,9 +541,11 @@ means a crash leaves an empty one — the old copy destroyed before the new one 
 what avoids that: replacing a file by rename is atomic on both Linux and Windows, so any crash
 leaves either the complete old file or the complete new one. **The temp file must be in the same
 directory**, since atomicity only holds within one filesystem; across a mount boundary the rename
-degrades into copy-then-delete, which is the failure being avoided. In practice the header changes
-almost never, so an ordinary save writes the payload alone; the two move together only when a
-profile is created or renamed.
+degrades into copy-then-delete, which is the failure being avoided. **Every save writes both
+files, header first** (DESIGN §7): both temp files are written and read back (below) before
+either is renamed, then the header is renamed into place before the payload. A crash between
+the two renames leaves `schemaVersion` ahead of the content, never behind it, and ahead only
+makes an older app refuse the file as newer.
 
 **A save reads its own temp file back before it replaces anything,** through the same strict
 read and mapping that opening a profile uses, so the live file has always passed the check it
