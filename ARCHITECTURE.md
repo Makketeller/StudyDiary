@@ -592,10 +592,26 @@ forbids for a newer file. The store reads `schemaVersion` from `profile.json` on
 above this app's, it refuses with the newer-version message; otherwise it reads both files
 strictly.
 
-**"No profile yet" and "a profile that will not load" never share a code path.** The first is a
-first run and creates a profile. The second never does: it refuses, copies the damaged file
-aside, and offers a recovery copy. A `TryLoad` that falls back to an empty profile on failure is
-the exact shape of the bug DESIGN §7 forbids, and it looks like reasonable code.
+**Data owns `profile.json` outright; App sees outcomes, never the header.** `IEntryStore` has no
+open method, so it stays about entries. A store is made by one of two static factories on the
+implementation, behind a private constructor, so no half-loaded store can exist:
+
+- **Open** reads and checks, and never creates or changes the profile's two files. Nothing of
+  ours in the folder (no `profile.json`, no `payload.json`, no recovery copy) is reported as no
+  profile here. Anything else missing is damage, including both files gone while copies remain,
+  because a diary lived there. Then the version is read on its own (above), the header strictly,
+  and the payload strictly through the mapping. `encryption` must be `"none"`: anything else is a
+  hand-edit, since a genuinely encrypted file is always written by a newer version and refused
+  first. On damage the damaged file is copied aside before Open returns. No profile here, newer
+  and damaged are expected outcomes, so they come back as a result, not as exceptions.
+- **Create** writes both files and the first recovery copy, with a name App supplies, and
+  refuses, as a bug, if anything of ours is already in the folder, so a first run can never
+  overwrite a diary.
+
+"No profile yet" and "a profile that will not load" therefore never share a code path: they are
+different methods. A `TryLoad` that falls back to an empty profile on failure is the exact shape
+of the bug DESIGN §7 forbids, and it looks like reasonable code. Reading a header is its own
+small piece inside Data, so the picker can read headers without opening a payload.
 
 **A missing attachment is not a parse failure.** It renders as a visible placeholder in that one
 entry and changes nothing else. The entry keeps its reference, and the payload is never rewritten to

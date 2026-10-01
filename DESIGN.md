@@ -349,9 +349,12 @@ promise), or encrypting it changes the document's *shape* — which is exactly t
 this design exists to avoid. Two files keep both promises: the payload is a normal readable JSON
 document today and an opaque blob later, and neither file ever changes shape.
 
-The cost is that atomic write-then-replace now covers two files rather than one. In practice the
-header changes almost never, so a save writes the payload alone; the two only move together when
-a profile is created or renamed.
+The cost is that atomic write-then-replace covers two files rather than one, on every save. The
+header is written with the payload each time, and first, because its `schemaVersion` must
+describe the content beside it: a header left at an older version beside newer content would
+let an older app call that content damaged, which the recovery rules below forbid. Header first
+means a crash between the two can leave the stamp ahead of the content, never behind it, and
+ahead only makes an older app refuse the file as newer.
 
 Two rules follow, and both must hold from the first release:
 
@@ -786,3 +789,22 @@ was rejected because it needs a judgement at every release, and one missed judge
 The cost of bumping every time is that an older app refuses some files it could have read.
 
 Reopen only if those refusals turn out to be a real nuisance.
+
+### 2026-10-01 — Every save writes the header
+
+§7 had a save write the payload alone, and the header only when a profile was created or
+renamed, so that both files were rarely in flight at once.
+
+The defect: `schemaVersion` then describes whoever created the profile, not whoever last wrote
+its content. A release that adds a field and saves the payload alone leaves the old number in
+the header; an older app opens the file as its own, meets the new key, and calls it damage,
+offering a recovery copy that throws away everything the newer release wrote. §7 forbids exactly
+that. The first release cannot meet it, since only one version exists, which is why it went
+unnoticed.
+
+Rewriting the header only when its version is lower than the app's was considered, and would
+close the hole too. It was rejected because it is a branch to remember, and one no test can
+reach until a second release exists. Writing it every time, first, needs neither. The cost is a
+second small write and rename per save.
+
+Reopen only if the extra write turns out to cost something measurable.
