@@ -59,6 +59,9 @@ refusal with no way back is a lockout: the notes are intact and a non-technical 
 them. A copy that was never taken cannot be offered, so taking them starts with the first write,
 even though everything else about recovery waits for Data resilience, beyond 1.0.
 
+**Open before tagging this:** how a development build is kept out of the real data folder.
+Once 0.1.0 is in daily use, a debug run of the next release opens the same diary.
+
 *Windows caveat:* the extra binary is one more `dotnet publish` line, but a Windows build that has
 never been launched on Windows is a claim, not a release. Either smoke-test it in a VM before
 tagging or mark it explicitly untested. Path handling must use `Path.Combine` throughout —

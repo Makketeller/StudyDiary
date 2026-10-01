@@ -379,7 +379,7 @@ rules restated as code obligations, and all of them hold from the first release.
 `~/.local/share/`, `%LOCALAPPDATA%` and `~/Library/Application Support/` respectively:
 
 ```
-StudyDiary/
+studydiary/
 └── profiles/
     └── default/
         ├── profile.json
@@ -394,9 +394,11 @@ already implied by a decision made long before the release that needs it. Buildi
 one `Path.Combine` segment. Not building it means the profiles release has to find a real user's
 only copy of their notes and move it, which is the worst code in the app to have to write.
 
-**Folder names are lowercase, from a single constant.** Linux is case-sensitive and Windows is
-not, so a name created as `Profiles` and looked up as `profiles` works on the dev machine's
-opposite and fails on Fedora. Matches `attachments/` (DESIGN §7).
+**Folder names are lowercase, every one of them, from a single constant.** Linux is
+case-sensitive and Windows is not, so a name created as `Profiles` and looked up as `profiles`
+works on the dev machine's opposite and fails on Fedora. Matches `attachments/` (DESIGN §7).
+The top folder is the code name, `studydiary`, and stays that whatever the product is called:
+renaming it after release means moving every user's data.
 
 `payload.json` has exactly two top-level keys, `entries` and `dayLogs`. `dayLogs` is written as
 an empty array from the first release: it is a collection rather than a field with semantics, so
@@ -628,9 +630,21 @@ configured separately from the one for properties and able to drift from it, in 
 nothing: the member name is the value's actual identity in the code, and one fewer transformation
 between code and disk is the safer default.
 
-**Paths are built with `Path.Combine`, always,** and the data folder is resolved from
-`Environment.SpecialFolder.LocalApplicationData`, which already resolves correctly per OS. A literal
-`/` or `\` in a path string is a portability bug that the dev machine will never reveal.
+**Paths are built with `Path.Combine`, always.** A literal `/` or `\` in a path string is a
+portability bug that the dev machine will never reveal.
+
+**App finds the machine's data folder, Data owns every name inside it, and the store is handed
+its folder.** App resolves `Environment.SpecialFolder.LocalApplicationData` once at startup
+with `SpecialFolderOption.Create`: the default returns an empty string when the folder does not
+exist yet, and an empty root combines into a relative path that lands wherever the app was
+launched from (checked 2026-10). One static class in Data holds every folder and file name and
+turns that root into a profile's folder. The store takes its profile folder and the
+`TimeProvider` (§4) as required constructor parameters, with no defaults, and refuses a path
+that is not fully qualified. Nothing in Data looks either up, so no test can reach the real data
+folder: each hands the store a fresh temporary folder and a fixed clock, a small `TimeProvider`
+subclass in the test project rather than a testing package. The store is given a profile's
+folder rather than the root, so profiles (DESIGN §6) add a way to choose a folder and leave the
+store unchanged.
 
 **Migration code lives here, behind `IEntryStore`** — never in Domain (DESIGN §7).
 
