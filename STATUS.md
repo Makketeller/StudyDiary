@@ -1,4 +1,4 @@
-**Last updated:** 2026-10-01 · **Version:** pre-0.1.0 · **Repo:** 79 commits, public, GPLv3.
+**Last updated:** 2026-10-01 · **Version:** pre-0.1.0 · **Repo:** 85 commits, public, GPLv3.
 
 ## Exists and is committed
 
@@ -26,7 +26,8 @@
 
 ## Does not exist yet
 
-- `IEntryStore` and its JSON implementation. No file is read or written yet.
+- `IEntryStore` and its JSON implementation: fully designed (ARCHITECTURE §5), not yet typed.
+  No file is read or written yet.
 - Recovery copies: decided and documented, but nothing takes one.
 - `StudyDiary.App` is the untouched Avalonia template.
 
@@ -43,45 +44,64 @@ state is quietly repaired by reviewing it and only trips on readiness. Nothing
 handles this and nothing needs to yet — no ladder is user-editable and none has
 shrunk. Related to DESIGN §12's open question on ladder changes; record the answer
 there, not here.
+
 ## Decided this session
 
-- **A null where the type forbids one is damage.** The reader sets
-  `RespectNullableAnnotations`. It cannot see a null inside a list (the mapping refuses
-  those) or a file that is only `null` (the store must). ARCHITECTURE §5.
-- **The mapping.** History is a required argument of Entry → DTO, so no update can erase
-  it. An impossible entry, a null in a list or a repeated id refuses the whole file,
-  because skipping one is a partial load. The refusal is a `JsonException` naming the entry;
-  only `ArgumentException` is caught, so a bug still crashes. ARCHITECTURE §5, DESIGN §7.
+All five questions that were open before `JsonEntryStore`:
+
+- **Recovery copies.** One at every save; keep the newest twenty-five (a ten-card review is
+  twenty saves) and the first of each of the last seven days of use. DESIGN §7.
+- **Every save reads its files back before replacing them.** A failure is a bug: no
+  `JsonException` leaves a save, and the app stops with a plain message, never a vanishing
+  window. DESIGN §7, ARCHITECTURE §5.
+- **The store is handed its profile folder and a `TimeProvider`.** App resolves
+  `LocalApplicationData` with `SpecialFolderOption.Create`; Data owns every name; all folder
+  names lowercase, `studydiary` included. ARCHITECTURE §5.
+- **Data owns `profile.json`.** `OpenAsync` and `CreateAsync` factories behind a private
+  constructor; open reports outcomes, not exceptions. Every save writes the header first, a
+  reversal (DESIGN §13). ARCHITECTURE §5.
+- **The version is read first by a lenient probe.** Versions start at 1, and `schemaVersion`
+  never moves, renames or retypes. DESIGN §7, ARCHITECTURE §5.
+- **A wrong id throws before anything changes.** `KeyNotFoundException` for a missing one,
+  `InvalidOperationException` for a duplicate add. ARCHITECTURE §5.
+- **No Avalonia spike.** The store comes first; Avalonia follows it.
 
 ## Next session targets
 
-**`IEntryStore` and `JsonEntryStore`.** Undecided: a throwaway Avalonia spike in `scratch/`
-first, to tackle the biggest unknown early, or after the store.
+**`IEntryStore` and `JsonEntryStore`, happy path.** Type the interface with its `<exception>`
+docs, the layout class, and the test project's fixed clock. Then `CreateAsync`, `OpenAsync` on a
+good profile, and the five methods: header-first atomic write with read-back, and the file
+round trip.
 
-Open before `JsonEntryStore`:
+After that, the unhappy path: the version probe, newer and damaged outcomes, and recovery copies
+taken and offered.
 
-- **How many recovery copies, and when they are taken** (DESIGN §12). A copy at every save loses
-  nothing but copies a bug too; a copy per session survives the bug but loses the session.
-- **Where the data folder path comes from.** If the store resolves `LocalApplicationData`
-  itself, the tests write into the real user data folder. Injecting it is the same shape of seam
-  as the App-layer `TimeProvider`.
-- **Who owns `profile.json`.** The five `IEntryStore` methods are all about entries, but the
-  header has to be created on first run and read before the payload.
-- **How `schemaVersion` is read first.** The shared options refuse unknown keys, so reading
-  the version from a newer header needs its own lenient read of that one field.
-- **Missing-id behaviour** on `UpdateAsync`, `DeleteAsync` and `AppendReviewAsync`: throw or
-  no-op. Pick once, test it.
+Open, not blocking the happy path:
+
+- **Save failures from outside the app** (full disk, denied permission). DESIGN §12.
+
+- **The shape of `OpenAsync`'s outcome:** opened, no profile here, newer, damaged. Decide before
+  the unhappy path.
+- **Keeping dev builds out of the real data folder.** Before tagging 0.1.0 (ROADMAP).
 
 Watch for, when writing the store:
 
 - `UpdateAsync` passes the replaced DTO's history to `EntryMapping.ToDto`. The file round-trip
   test needs add → append a review → update → reload → assert the history survived.
-- `JsonException` is the one damage signal, from the reader and the mapping alike. Catch
-  nothing wider: anything else is a bug and must not trigger the recovery offer.
-- A file that is only `null` deserializes to `null` without throwing; treat it as damage.
+- `JsonException` is the damage signal inside Data, from the reader, the probe and the mapping
+  alike. Catch nothing wider. A save wraps it in `InvalidOperationException`; App never sees one.
+- A file that is only `null` deserializes to `null` without throwing; treat it as damage. The
+  probe covers the header; the payload read must check too.
 - `Assert.Equal` on a `DateTimeOffset` compares the instant, not the offset, so a lost
   `+02:00` would pass. The file round trip should compare `.Offset` too.
 - Read and write only through `StudyDiaryJson.Context`, never `StudyDiaryJsonContext.Default`.
-- The temp file for the atomic write goes in the same directory as its target.
+- Temp files go in the same directory as their targets; the header is renamed before the payload.
+- Check an id before changing anything: a refused call leaves memory, files and copies untouched.
+- Await every store call and every `Assert.ThrowsAsync`; an un-awaited task swallows the throw.
+- The fixed test clock fixes the time zone too, or "first copy of the day" depends on the machine.
+- A frozen test clock gives two saves the same instant: copy names must not collide.
+- A UTF-8 BOM at the start of a hand-edited file: test whether the reader skips it. It is not
+  damage.
+- Adding the probe: update `StudyDiaryJsonContext`'s summary, which says only two types are listed.
 - The header/payload split: `profile.json` carries `schemaVersion`, id, name, `encryption`;
   `payload.json` carries entries, history and DayLogs.
