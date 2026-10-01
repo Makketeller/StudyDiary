@@ -634,6 +634,16 @@ different methods. A `TryLoad` that falls back to an empty profile on failure is
 of the bug DESIGN §7 forbids, and it looks like reasonable code. Reading a header is its own
 small piece inside Data, so the picker can read headers without opening a payload.
 
+**Open returns one of four cases, each holding only what its case needs.** `OpenOutcome` is an
+abstract record with a private constructor and one sealed nested record per outcome: `Opened`
+holds the store, `NoProfile` holds nothing, and `Newer` and `Damaged` hold what their messages
+need (DESIGN §7). An enum plus nullable fields was rejected: "the store is set only when the
+profile opened" would be a rule to remember rather than a shape, and reading it in the wrong case
+is a null at run time. App tells the cases apart with a `switch` whose default arm throws, because
+on this C# version the compiler cannot see that the cases are all there are; C# 15's `closed`
+modifier would make that check the compiler's (checked 2026-10). `Opened` holds, and Create
+returns, an `IEntryStore`, so App names the JSON implementation once, at startup.
+
 **A missing attachment is not a parse failure.** It renders as a visible placeholder in that one
 entry and changes nothing else. The entry keeps its reference, and the payload is never rewritten to
 "clean up" a file the user may be about to restore.
