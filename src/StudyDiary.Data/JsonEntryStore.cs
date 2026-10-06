@@ -7,6 +7,7 @@
 // option) any later version. See LICENSE for details.
 
 using StudyDiary.Domain.Entries;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
@@ -141,10 +142,16 @@ public sealed class JsonEntryStore : IEntryStore
     {
         var bytes = await File.ReadAllBytesAsync(path);
 
-        return JsonSerializer.Deserialize(bytes, typeInfo)
+        return JsonSerializer.Deserialize(WithoutByteOrderMark(bytes), typeInfo)
             ?? throw new JsonException($"{path} holds only null.");
-
     }
+
+    // A UTF-8 byte-order mark is skipped, not refused (ARCHITECTURE): some
+    // editors add one, and the reader would otherwise call the file damaged.
+    private static ReadOnlySpan<byte> WithoutByteOrderMark(ReadOnlySpan<byte> bytes) =>
+        bytes.StartsWith(Encoding.UTF8.Preamble)
+            ? bytes[Encoding.UTF8.Preamble.Length..]
+            : bytes;
 
     private static void RequireFullPath(string profileFolder)
     {
