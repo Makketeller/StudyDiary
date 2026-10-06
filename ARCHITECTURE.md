@@ -547,6 +547,10 @@ either is renamed, then the header is renamed into place before the payload. A c
 the two renames leaves `schemaVersion` ahead of the content, never behind it, and ahead only
 makes an older app refuse the file as newer.
 
+**Each temp file is flushed to disk before it is renamed** (`FileStream.Flush(flushToDisk:
+true)`, checked 2026-10): the rename protects against the app crashing, and the flush against
+the machine losing power, which could otherwise leave the rename on disk and the new contents not.
+
 **A save reads its own temp file back before it replaces anything,** through the same strict
 read and mapping that opening a profile uses, so the live file has always passed the check it
 will face at the next open (DESIGN §7). The check is its own method, tested directly against
