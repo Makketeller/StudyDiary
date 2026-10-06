@@ -604,6 +604,13 @@ cannot see two places, and code covers both: a null inside a list, such as `"ent
 left to the mapping, and a file that is only `null` to the store. A null inside `dayLogs` is raw
 JSON and passes through untouched, like everything else there.
 
+**A UTF-8 byte-order mark is skipped, not refused.** Some editors put three invisible bytes
+(`EF BB BF`) at the start of a file they save, and hand-edited files are expected (DESIGN §7);
+JSON's own standard (RFC 8259) lets a reader ignore them. Reading from bytes, `System.Text.Json`
+treats them as an invalid value (checked 2026-10), so the store strips them before parsing, in
+one helper every read goes through, the version probe included. The writer never adds one, so
+the next save removes it.
+
 **The version is read before anything is read strictly.** A newer file carries keys this app has
 never seen, so a strict read would call it damaged and offer a recovery copy, which DESIGN §7
 forbids for a newer file. So `profile.json`'s bytes are read once and passed over twice. First a
