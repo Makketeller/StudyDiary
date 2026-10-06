@@ -20,6 +20,7 @@ public static class DataLayout
     internal const string DefaultProfileFolderName = "default";
     internal const string HeaderFileName = "profile.json";
     internal const string PayloadFileName = "payload.json";
+    internal const string TempFileSuffix = ".tmp";
 
     /// <summary>
     /// The default profile's folder, under the folder App resolved from
