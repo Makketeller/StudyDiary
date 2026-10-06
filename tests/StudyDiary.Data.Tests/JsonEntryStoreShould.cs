@@ -86,4 +86,22 @@ public class JsonEntryStoreShould : IDisposable
         await Assert.ThrowsAsync<ArgumentException>(
             () => JsonEntryStore.CreateAsync(
                 Path.Combine("relative", "folder"), "Physics", _clock));
+
+    [Theory]
+    [InlineData("profile.json")]
+    [InlineData("payload.json")]
+    public async Task AcceptAFileThatStartsWithAByteOrderMark(string fileName)
+    {
+        await JsonEntryStore.CreateAsync(_folder, "Physics", _clock);
+        var path = Path.Combine(_folder, fileName);
+        var original = File.ReadAllBytes(path);
+        File.WriteAllBytes(path, [0xEF, 0xBB, 0xBF, .. original]);
+
+        var (header, payload) = await JsonEntryStore.ReadAndCheckAsync(
+            Path.Combine(_folder, "profile.json"),
+            Path.Combine(_folder, "payload.json"));
+
+        Assert.Equal("Physics", header.Name);
+        Assert.Empty(payload.Entries);
+    }
 }
