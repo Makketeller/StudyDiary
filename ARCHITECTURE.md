@@ -551,7 +551,7 @@ makes an older app refuse the file as newer.
 true)`, checked 2026-10): the rename protects against the app crashing, and the flush against
 the machine losing power, which could otherwise leave the rename on disk and the new contents not.
 
-**A save reads its own temp file back before it replaces anything,** through the same strict
+**A save reads its own temp files back before it replaces anything,** through the same strict
 read and mapping that opening a profile uses, so the live file has always passed the check it
 will face at the next open (DESIGN §7). The check is its own method, tested directly against
 hand-damaged files, because a correct writer can never reach its failure branch. A failure is a
