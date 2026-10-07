@@ -107,6 +107,10 @@ public sealed class JsonEntryStore : IEntryStore
         var headerTemp = _headerPath + DataLayout.TempFileSuffix;
         var payloadTemp = _payloadPath + DataLayout.TempFileSuffix;
 
+        // This app's version, never the one read from disk: the header must
+        // describe the content written beside it (DESIGN §7).
+        _header.SchemaVersion = CurrentSchemaVersion;
+
         try
         {
             await WriteToDiskAsync(headerTemp, _header, StudyDiaryJson.Context.ProfileDto);
