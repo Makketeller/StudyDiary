@@ -16,8 +16,8 @@ namespace StudyDiary.Data;
 /// <summary>
 /// The JSON implementation of <see cref="IEntryStore"/>: one profile's
 /// folder, held whole in memory as its two DTOs and written whole on every
-/// change (ARCHITECTURE). Made only by <see cref="CreateAsync"/> or Open,
-/// so a half-loaded store cannot exist.
+/// change (ARCHITECTURE). Made only by <see cref="CreateAsync"/> or
+/// <see cref="OpenAsync"/>, so a half-loaded store cannot exist.
 /// </summary>
 public sealed class JsonEntryStore : IEntryStore
 {
@@ -77,6 +77,29 @@ public sealed class JsonEntryStore : IEntryStore
         var store = new JsonEntryStore(profileFolder, clock, header, new PayloadDto());
         await store.SaveAsync();
         return store;
+    }
+
+    /// <summary>
+    /// Opens the profile in <paramref name="profileFolder"/>, reading and
+    /// checking both files. Never creates or changes anything there
+    /// (ARCHITECTURE).
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// The folder is not a full path.
+    /// </exception>
+    public static async Task<OpenOutcome> OpenAsync(string profileFolder, TimeProvider clock)
+    {
+        RequireFullPath(profileFolder);
+        ArgumentNullException.ThrowIfNull(clock);
+
+        if (!HoldsAnythingOfOurs(profileFolder))
+            return new OpenOutcome.NoProfile();
+
+        var (header, payload) = await ReadAndCheckAsync(
+            HeaderPath(profileFolder), PayloadPath(profileFolder));
+
+        return new OpenOutcome.Opened(
+            new JsonEntryStore(profileFolder, clock, header, payload));
     }
 
     public Task<IReadOnlyList<Entry>> GetAllAsync() => throw new NotImplementedException();
