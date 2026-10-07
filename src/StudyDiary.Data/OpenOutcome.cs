@@ -21,4 +21,11 @@ public abstract record OpenOutcome
 
     /// <summary>Nothing of ours in the folder: a first run.</summary>
     public sealed record NoProfile : OpenOutcome;
+
+    /// <summary>
+    /// Saved by a newer version of the app: refused without being read
+    /// further, and never offered a recovery copy (DESIGN §7). Both numbers
+    /// travel so the message can show them.
+    /// </summary>
+    public sealed record Newer(int FileSchemaVersion, int SupportedSchemaVersion) : OpenOutcome;
 }

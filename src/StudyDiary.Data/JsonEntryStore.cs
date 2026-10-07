@@ -95,8 +95,16 @@ public sealed class JsonEntryStore : IEntryStore
         if (!HoldsAnythingOfOurs(profileFolder))
             return new OpenOutcome.NoProfile();
 
-        var (header, payload) = await ReadAndCheckAsync(
-            HeaderPath(profileFolder), PayloadPath(profileFolder));
+        var headerPath = HeaderPath(profileFolder);
+        var headerBytes = await File.ReadAllBytesAsync(headerPath);
+        var version = ReadSchemaVersion(headerBytes, headerPath);
+
+        // Decided before the strict read, which would call a newer file
+        // damaged, or worse, read one it misunderstands (DESIGN §7).
+        if (version > CurrentSchemaVersion)
+            return new OpenOutcome.Newer(version, CurrentSchemaVersion);
+
+        var (header, payload) = await CheckAsync(headerBytes, headerPath, PayloadPath(profileFolder));
 
         return new OpenOutcome.Opened(
             new JsonEntryStore(profileFolder, clock, header, payload));
@@ -142,19 +150,27 @@ public sealed class JsonEntryStore : IEntryStore
     }
 
     /// <summary>
-    /// The check a profile's two files face, at Open and in every save's
-    /// read-back: each read strictly, and every Entry rebuilt through the
-    /// Domain (ARCHITECTURE).
+    /// The whole check a profile's two files face, for a save's read-back
+    /// and the recovery copies: a version this app reads, then each file
+    /// strictly, then every Entry rebuilt through the Domain (ARCHITECTURE).
+    /// Open makes the same checks but answers a newer version as an outcome.
     /// </summary>
-    /// <exception cref="JsonException">Either file is refused.</exception>
+    /// <exception cref="JsonException">
+    /// Either file is refused, including a header newer than this app reads.
+    /// </exception>
     internal static async Task<(ProfileDto Header, PayloadDto Payload)> ReadAndCheckAsync(
         string headerPath, string payloadPath)
     {
-        var header = await ReadAsync(headerPath, StudyDiaryJson.Context.ProfileDto);
-        var payload = await ReadAsync(payloadPath, StudyDiaryJson.Context.PayloadDto);
-        _ = EntryMapping.ToEntries(payload.Entries);
+        var headerBytes = await File.ReadAllBytesAsync(headerPath);
+        var version = ReadSchemaVersion(headerBytes, headerPath);
 
-        return (header, payload);
+        if (version > CurrentSchemaVersion)
+            throw new JsonException(
+                $"{headerPath} has schemaVersion {version}; this app reads up to "
+                + $"{CurrentSchemaVersion}.",
+                path: "$.schemaVersion", lineNumber: null, bytePositionInLine: null);
+
+        return await CheckAsync(headerBytes, headerPath, payloadPath);
     }
 
     /// <summary>
@@ -223,6 +239,18 @@ public sealed class JsonEntryStore : IEntryStore
         await using var file = new FileStream(path, FileMode.Create, FileAccess.Write);
         await file.WriteAsync(bytes);
         file.Flush(flushToDisk: true);
+    }
+
+    // The strict half of the check, over header bytes already read once and
+    // already found to be a version this app reads.
+    private static async Task<(ProfileDto Header, PayloadDto Payload)> CheckAsync(
+        byte[] headerBytes, string headerPath, string payloadPath)
+    {
+        var header = Parse(headerBytes, headerPath, StudyDiaryJson.Context.ProfileDto);
+        var payload = await ReadAsync(payloadPath, StudyDiaryJson.Context.PayloadDto);
+        _ = EntryMapping.ToEntries(payload.Entries);
+
+        return (header, payload);
     }
 
     private static async Task<T> ReadAsync<T>(string path, JsonTypeInfo<T> typeInfo)
