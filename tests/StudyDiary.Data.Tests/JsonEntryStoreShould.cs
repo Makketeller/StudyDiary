@@ -7,12 +7,17 @@
 // option) any later version. See LICENSE for details.
 
 using StudyDiary.Data;
+using StudyDiary.Domain.Entries;
+using StudyDiary.Domain.Scheduling;
 using System.Text.Json;
 
 namespace StudyDiary.Data.Tests;
 
 public class JsonEntryStoreShould : IDisposable
 {
+    private static readonly ReviewRecord Review =
+        new(new DateOnly(2026, 10, 20), ReviewOutcome.Pass, 2, 3, IsPractice: true);
+
     private static readonly DateTimeOffset Instant =
         new(2026, 10, 6, 0, 30, 0, TimeSpan.FromHours(9));
 
@@ -22,6 +27,41 @@ public class JsonEntryStoreShould : IDisposable
     private readonly FixedTimeProvider _clock = new(Instant);
 
     public void Dispose() => Directory.Delete(_folder, recursive: true);
+
+    private string HeaderPath => Path.Combine(_folder, "profile.json");
+    private string PayloadPath => Path.Combine(_folder, "payload.json");
+
+    // Every value differs from its type's default, so a field the store
+    // forgets comes back different, not equal by luck.
+    private static Entry AnEntry() => new(
+        Guid.NewGuid(), "Bloch's theorem", "ψ(r + R) = e^{ik·R} ψ(r)",
+        new DateOnly(2026, 10, 6), Instant,
+        new ReviewState(3, new DateOnly(2026, 10, 20)));
+
+    private Task<IEntryStore> CreateStoreAsync() =>
+        JsonEntryStore.CreateAsync(_folder, "Physics", _clock);
+
+    // Opens the folder afresh, as the app does at its next start.
+    private async Task<IEntryStore> ReopenAsync()
+    {
+        var outcome = await JsonEntryStore.OpenAsync(_folder, _clock);
+        return Assert.IsType<OpenOutcome.Opened>(outcome).Store;
+    }
+
+    // A refused call must throw before writing anything: both files keep
+    // the date they were given.
+    private async Task AssertRefusedWithoutWriting<TException>(Func<Task> call)
+        where TException : Exception
+    {
+        var longAgo = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(HeaderPath, longAgo);
+        File.SetLastWriteTimeUtc(PayloadPath, longAgo);
+
+        await Assert.ThrowsAsync<TException>(call);
+
+        Assert.Equal(longAgo, File.GetLastWriteTimeUtc(HeaderPath));
+        Assert.Equal(longAgo, File.GetLastWriteTimeUtc(PayloadPath));
+    }
 
     [Fact]
     public async Task WriteTheHeaderOfANewProfile()
@@ -164,4 +204,123 @@ public class JsonEntryStoreShould : IDisposable
     public async Task RefuseToOpenAFolderThatIsNotAFullPath() =>
         await Assert.ThrowsAsync<ArgumentException>(
             () => JsonEntryStore.OpenAsync(Path.Combine("relative", "folder"), _clock));
+
+    [Fact]
+    public async Task RoundTripAnEntryUnchanged()
+    {
+        var store = await CreateStoreAsync();
+        var entry = AnEntry();
+        await store.AddAsync(entry);
+
+        var reopened = await ReopenAsync();
+        var loaded = Assert.Single(await reopened.GetAllAsync());
+
+        Assert.Equal(entry.Id, loaded.Id);
+        Assert.Equal(entry.Title, loaded.Title);
+        Assert.Equal(entry.Body, loaded.Body);
+        Assert.Equal(entry.CreatedOn, loaded.CreatedOn);
+        Assert.Equal(entry.CreatedAt, loaded.CreatedAt);
+        Assert.Equal(entry.CreatedAt.Offset, loaded.CreatedAt.Offset);
+        Assert.Equal(entry.ReviewState, loaded.ReviewState);
+    }
+
+    [Fact]
+    public async Task ReturnTheUpdatedStateAfterReopening()
+    {
+        var store = await CreateStoreAsync();
+        var entry = AnEntry();
+        await store.AddAsync(entry);
+        var promoted = new ReviewState(4, new DateOnly(2026, 11, 3));
+
+        entry.ApplyReview(promoted);
+        await store.UpdateAsync(entry);
+
+        var reopened = await ReopenAsync();
+        Assert.Equal(promoted, Assert.Single(await reopened.GetAllAsync()).ReviewState);
+    }
+
+    [Fact]
+    public async Task KeepTheReviewHistoryThroughAnUpdate()
+    {
+        var store = await CreateStoreAsync();
+        var entry = AnEntry();
+        await store.AddAsync(entry);
+
+        await store.AppendReviewAsync(entry.Id, Review);
+        await store.UpdateAsync(entry);
+
+        var (_, payload) = await JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath);
+        var saved = Assert.Single(Assert.Single(payload.Entries).ReviewHistory);
+        Assert.Equal(Review, EntryMapping.ToReviewRecord(saved));
+    }
+
+    [Fact]
+    public async Task RemoveADeletedEntryFromTheFile()
+    {
+        var store = await CreateStoreAsync();
+        var kept = AnEntry();
+        var deleted = AnEntry();
+        await store.AddAsync(kept);
+        await store.AddAsync(deleted);
+
+        await store.DeleteAsync(deleted.Id);
+
+        var reopened = await ReopenAsync();
+        Assert.Equal(kept.Id, Assert.Single(await reopened.GetAllAsync()).Id);
+    }
+
+    [Fact]
+    public async Task IgnoreAChangedEntryUntilItIsUpdated()
+    {
+        var store = await CreateStoreAsync();
+        var entry = AnEntry();
+        await store.AddAsync(entry);
+
+        var handedOut = Assert.Single(await store.GetAllAsync());
+        handedOut.ApplyReview(new ReviewState(4, new DateOnly(2026, 11, 3)));
+
+        Assert.Equal(entry.ReviewState, Assert.Single(await store.GetAllAsync()).ReviewState);
+    }
+
+    [Fact]
+    public async Task RefuseToAddAnEntryItAlreadyHolds()
+    {
+        var store = await CreateStoreAsync();
+        var entry = AnEntry();
+        await store.AddAsync(entry);
+
+        await AssertRefusedWithoutWriting<InvalidOperationException>(
+            () => store.AddAsync(entry));
+    }
+
+    [Fact]
+    public async Task RefuseToUpdateAnEntryItDoesNotHold()
+    {
+        var store = await CreateStoreAsync();
+        await store.AddAsync(AnEntry());
+
+        await AssertRefusedWithoutWriting<KeyNotFoundException>(
+            () => store.UpdateAsync(AnEntry()));
+    }
+
+    [Fact]
+    public async Task RefuseToDeleteAnEntryItDoesNotHold()
+    {
+        var store = await CreateStoreAsync();
+        await store.AddAsync(AnEntry());
+
+        await AssertRefusedWithoutWriting<KeyNotFoundException>(
+            () => store.DeleteAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task RefuseToAppendAReviewToAnEntryItDoesNotHold()
+    {
+        var store = await CreateStoreAsync();
+        await store.AddAsync(AnEntry());
+
+        await AssertRefusedWithoutWriting<KeyNotFoundException>(
+            () => store.AppendReviewAsync(Guid.NewGuid(), Review));
+    }
+
 }
