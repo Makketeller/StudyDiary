@@ -11,6 +11,7 @@ using StudyDiary.Domain.Entries;
 using StudyDiary.Domain.Scheduling;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace StudyDiary.Data.Tests;
 
@@ -62,6 +63,19 @@ public class JsonEntryStoreShould : IDisposable
 
         Assert.Equal(longAgo, File.GetLastWriteTimeUtc(HeaderPath));
         Assert.Equal(longAgo, File.GetLastWriteTimeUtc(PayloadPath));
+    }
+
+    // Rewrites the header as a later version would save it: a higher
+    // schemaVersion and, if asked, a key this app has never seen.
+    private void SaveHeaderAsALaterVersion(bool withANewKey)
+    {
+        var header = JsonNode.Parse(File.ReadAllText(HeaderPath))!;
+        header["schemaVersion"] = JsonEntryStore.CurrentSchemaVersion + 1;
+
+        if (withANewKey)
+            header["colour"] = "blue";
+
+        File.WriteAllText(HeaderPath, header.ToJsonString());
     }
 
     [Fact]
@@ -177,6 +191,16 @@ public class JsonEntryStoreShould : IDisposable
         Assert.ThrowsAny<JsonException>(
             () => JsonEntryStore.ReadSchemaVersion(Encoding.UTF8.GetBytes(json), HeaderPath));
 
+    // Each is broken after the version, so the probe has its number before
+    // it reaches the fault: a broken file is damage, never Newer.
+    [Theory]
+    [InlineData("""{ "schemaVersion": 1, "name": "Physics" """)]
+    [InlineData("""{ "schemaVersion": 1, "name": }""")]
+    [InlineData("""{ "schemaVersion": 1 } }""")]
+    public void RefuseAHeaderThatIsNotValidJson(string json) =>
+        Assert.ThrowsAny<JsonException>(
+            () => JsonEntryStore.ReadSchemaVersion(Encoding.UTF8.GetBytes(json), HeaderPath));
+
     [Fact]
     public async Task ReportNoProfileForAnEmptyFolder()
     {
@@ -213,6 +237,34 @@ public class JsonEntryStoreShould : IDisposable
         var outcome = await JsonEntryStore.OpenAsync(_folder, _clock);
 
         Assert.IsType<OpenOutcome.Opened>(outcome);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ReportNewerForAProfileSavedByALaterVersion(bool withANewKey)
+    {
+        await CreateStoreAsync();
+        SaveHeaderAsALaterVersion(withANewKey);
+
+        var outcome = await JsonEntryStore.OpenAsync(_folder, _clock);
+
+        Assert.Equal(
+            new OpenOutcome.Newer(
+                JsonEntryStore.CurrentSchemaVersion + 1, JsonEntryStore.CurrentSchemaVersion),
+            outcome);
+    }
+
+    [Fact]
+    public async Task FailTheCheckForAProfileSavedByALaterVersion()
+    {
+        await CreateStoreAsync();
+        SaveHeaderAsALaterVersion(withANewKey: false);
+
+        var refusal = await Assert.ThrowsAsync<JsonException>(
+            () => JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath));
+
+        Assert.Equal("$.schemaVersion", refusal.Path);
     }
 
     [Fact]
@@ -354,5 +406,4 @@ public class JsonEntryStoreShould : IDisposable
         await AssertRefusedWithoutWriting<KeyNotFoundException>(
             () => store.AppendReviewAsync(Guid.NewGuid(), Review));
     }
-
 }
