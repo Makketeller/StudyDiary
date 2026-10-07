@@ -102,12 +102,44 @@ public sealed class JsonEntryStore : IEntryStore
             new JsonEntryStore(profileFolder, clock, header, payload));
     }
 
-    public Task<IReadOnlyList<Entry>> GetAllAsync() => throw new NotImplementedException();
-    public Task AddAsync(Entry entry) => throw new NotImplementedException();
-    public Task UpdateAsync(Entry entry) => throw new NotImplementedException();
-    public Task DeleteAsync(Guid id) => throw new NotImplementedException();
-    public Task AppendReviewAsync(Guid entryId, ReviewRecord record) =>
-        throw new NotImplementedException();
+    public Task<IReadOnlyList<Entry>> GetAllAsync() =>
+        Task.FromResult(EntryMapping.ToEntries(_payload.Entries));
+
+    public async Task AddAsync(Entry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (_payload.Entries.Exists(dto => dto.Id == entry.Id))
+            throw new InvalidOperationException($"Entry {entry.Id} is already held.");
+
+        _payload.Entries.Add(EntryMapping.ToDto(entry, []));
+        await SaveAsync();
+    }
+
+    public async Task UpdateAsync(Entry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        var index = IndexOfHeldEntry(entry.Id);
+
+        var history = _payload.Entries[index].ReviewHistory;
+        _payload.Entries[index] = EntryMapping.ToDto(entry, history);
+        await SaveAsync();
+    }
+
+    public async Task DeleteAsync(Guid id)
+    {
+        _payload.Entries.RemoveAt(IndexOfHeldEntry(id));
+        await SaveAsync();
+    }
+
+    public async Task AppendReviewAsync(Guid entryId, ReviewRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        var index = IndexOfHeldEntry(entryId);
+
+        _payload.Entries[index].ReviewHistory.Add(EntryMapping.ToDto(record));
+        await SaveAsync();
+    }
 
     /// <summary>
     /// The check a profile's two files face, at Open and in every save's
@@ -123,6 +155,17 @@ public sealed class JsonEntryStore : IEntryStore
         _ = EntryMapping.ToEntries(payload.Entries);
 
         return (header, payload);
+    }
+
+    // A wrong id is a bug in the caller, refused before anything changes
+    // (ARCHITECTURE).
+    private int IndexOfHeldEntry(Guid id)
+    {
+        var index = _payload.Entries.FindIndex(dto => dto.Id == id);
+
+        return index >= 0
+            ? index
+            : throw new KeyNotFoundException($"No entry {id} is held.");
     }
 
     private async Task SaveAsync()
