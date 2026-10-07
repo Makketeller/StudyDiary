@@ -545,7 +545,10 @@ degrades into copy-then-delete, which is the failure being avoided. **Every save
 files, header first** (DESIGN §7): both temp files are written and read back (below) before
 either is renamed, then the header is renamed into place before the payload. A crash between
 the two renames leaves `schemaVersion` ahead of the content, never behind it, and ahead only
-makes an older app refuse the file as newer.
+makes an older app refuse the file as newer. **The header is stamped with this app's
+`schemaVersion` at every save, never the one it was read with:** a store opened on an older
+file would otherwise carry the old number through every save, beside content in this app's
+format. No test can see this until a second version exists.
 
 **Each temp file is flushed to disk before it is renamed** (`FileStream.Flush(flushToDisk:
 true)`, checked 2026-10): the rename protects against the app crashing, and the flush against
