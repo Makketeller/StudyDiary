@@ -564,8 +564,16 @@ the app keeps its own copies and offers one back.
   > The damaged file has been kept at `…`. You can look at it yourself if you want to.
 
   It leads with *nothing has been changed* because that is true, and it is what someone who has
-  just broken something needs to hear first. Declining changes nothing further, and the profile
-  stays closed.
+  just broken something needs to hear first. Declining changes nothing further, and
+  the profile stays closed.
+  Below the message, collapsed, sit **details for fixing the file by
+  hand**: which file was refused, the line where reading stopped when
+  there is one, where in the file, and the reader's own message.
+  Collapsed, because someone who never touched the file has no use for
+  them; there, because someone who did can fix a typo in seconds rather
+  than lose their edit to a copy. The reader's wording is shown as it
+  is, not translated: it is written for developers and changes between
+  .NET versions, so matching on it would break silently.
 - **The damaged file is kept, never deleted.** It is copied aside under a name that says what it
   is *before* the question is asked, so the path in the message is real whichever answer the
   user gives. They may have made deliberate edits worth salvaging, or know someone who can fix
@@ -741,10 +749,6 @@ undecided — if it appears below, no decision exists yet.
   to the recipient's DayLogs for that day (§8), which is either a pleasant accident or a small lie
   about your own diary. The alternative — keeping the sender's date — links to DayLogs the
   recipient never wrote. Unexamined; nothing depends on it before shared import ships.
-- **Does the refusal message say what broke?** §7's message says the diary could not be opened,
-  not why. For someone who edited the file by hand, the line and key that broke it turn a
-  lockout into a quick fix, and the reader already knows both. Whether the dialog shows that
-  detail, and how plainly, is undecided. Due before the recovery dialog is built.
 - **Does a backup carry `recovery/`?** §7 defines a backup as the whole folder, and the folder
   holds the app's own recovery copies. Carrying them makes a backup bigger and brings old copies
   into the restored profile; leaving them out makes "the whole folder" not quite true. Nothing

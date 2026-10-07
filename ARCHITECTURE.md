@@ -508,8 +508,9 @@ at once.
 hand-edited entry is checked by the same rules as every other: a box below one, a both-blank
 entry, an empty id. The mapping catches the `ArgumentException` around each constructor call and
 throws a `JsonException` naming the entry by position and id, with the original kept as its
-inner exception, so the store has one signal for a damaged file and the detail is there if the
-refusal message ever shows it. It catches `ArgumentException` and nothing wider: anything else
+inner exception, so the store has one signal for a damaged file
+and the detail is there for the refusal message to show (DESIGN §7).
+It catches `ArgumentException` and nothing wider: anything else
 is a bug in this app, and must crash rather than be reported as damage and send the user to a
 recovery copy. The mapping also refuses what no constructor can see: a null inside a list, and
 two entries sharing an id, which would leave update and delete not knowing which one they mean.
