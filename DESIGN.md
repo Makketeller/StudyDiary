@@ -502,6 +502,10 @@ own integer rather than a copy of the app version, because minors restart at eve
   rather than loading a partial object and saving it back with the unknown fields dropped.
   Silent field-dropping on save is the one way a local-first app destroys data it was trusted
   with. The message says the file was saved by a newer version and asks the user to update.
+  Below it, collapsed like the details on a damaged file (below), sit the
+  two format numbers: the file's and the highest this app reads. Most
+  users never need them. They are what shows that a development build
+  wrote the file, when no newer release exists to update to.
 - **Why every release, and not only the ones that change the file.** Both close the hole (§13),
   but bumping only on a format change needs a judgement at every release, and one missed
   judgement reopens it. Bumping every time needs none. The cost is that an older app refuses
