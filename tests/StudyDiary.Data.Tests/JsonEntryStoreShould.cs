@@ -9,6 +9,7 @@
 using StudyDiary.Data;
 using StudyDiary.Domain.Entries;
 using StudyDiary.Domain.Scheduling;
+using System.Text;
 using System.Text.Json;
 
 namespace StudyDiary.Data.Tests;
@@ -144,6 +145,37 @@ public class JsonEntryStoreShould : IDisposable
         Assert.Equal("Physics", header.Name);
         Assert.Empty(payload.Entries);
     }
+
+    [Fact]
+    public void ReadTheSchemaVersionOfAFileWithKeysItDoesNotKnow()
+    {
+        var bytes = Encoding.UTF8.GetBytes(
+            """{ "schemaVersion": 7, "name": "Physics", "colour": "blue" }""");
+
+        Assert.Equal(7, JsonEntryStore.ReadSchemaVersion(bytes, HeaderPath));
+    }
+
+    [Fact]
+    public void ReadTheSchemaVersionOfAFileThatStartsWithAByteOrderMark()
+    {
+        byte[] bytes =
+            [0xEF, 0xBB, 0xBF, .. Encoding.UTF8.GetBytes("""{ "schemaVersion": 1 }""")];
+
+        Assert.Equal(1, JsonEntryStore.ReadSchemaVersion(bytes, HeaderPath));
+    }
+
+    [Theory]
+    [InlineData("""{ "name": "Physics" }""")]
+    [InlineData("""{ "schemaVersion": 1, "schemaVersion": 1 }""")]
+    [InlineData("""{ "schemaVersion": null }""")]
+    [InlineData("""{ "schemaVersion": "1" }""")]
+    [InlineData("""{ "schemaVersion": 1.5 }""")]
+    [InlineData("""{ "schemaVersion": 0 }""")]
+    [InlineData("""{ "schemaVersion": -1 }""")]
+    [InlineData("null")]
+    public void RefuseAHeaderWithoutAUsableSchemaVersion(string json) =>
+        Assert.ThrowsAny<JsonException>(
+            () => JsonEntryStore.ReadSchemaVersion(Encoding.UTF8.GetBytes(json), HeaderPath));
 
     [Fact]
     public async Task ReportNoProfileForAnEmptyFolder()
