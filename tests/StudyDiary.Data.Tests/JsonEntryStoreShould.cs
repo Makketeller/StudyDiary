@@ -104,4 +104,64 @@ public class JsonEntryStoreShould : IDisposable
         Assert.Equal("Physics", header.Name);
         Assert.Empty(payload.Entries);
     }
+
+    [Fact]
+    public async Task ReportNoProfileForAnEmptyFolder()
+    {
+        var outcome = await JsonEntryStore.OpenAsync(_folder, _clock);
+
+        Assert.IsType<OpenOutcome.NoProfile>(outcome);
+    }
+
+    [Fact]
+    public async Task ReportNoProfileForAFolderThatDoesNotExist()
+    {
+        var missing = Path.Combine(_folder, "missing");
+
+        var outcome = await JsonEntryStore.OpenAsync(missing, _clock);
+
+        Assert.IsType<OpenOutcome.NoProfile>(outcome);
+    }
+
+    [Fact]
+    public async Task NotCreateAMissingFolderWhenOpening()
+    {
+        var missing = Path.Combine(_folder, "missing");
+
+        await JsonEntryStore.OpenAsync(missing, _clock);
+
+        Assert.False(Directory.Exists(missing));
+    }
+
+    [Fact]
+    public async Task OpenAProfileItCreated()
+    {
+        await JsonEntryStore.CreateAsync(_folder, "Physics", _clock);
+
+        var outcome = await JsonEntryStore.OpenAsync(_folder, _clock);
+
+        Assert.IsType<OpenOutcome.Opened>(outcome);
+    }
+
+    [Fact]
+    public async Task WriteNothingWhenOpening()
+    {
+        await JsonEntryStore.CreateAsync(_folder, "Physics", _clock);
+        var longAgo = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        string[] paths =
+            [Path.Combine(_folder, "profile.json"), Path.Combine(_folder, "payload.json")];
+
+        foreach (var path in paths)
+            File.SetLastWriteTimeUtc(path, longAgo);
+
+        await JsonEntryStore.OpenAsync(_folder, _clock);
+
+        foreach (var path in paths)
+            Assert.Equal(longAgo, File.GetLastWriteTimeUtc(path));
+    }
+
+    [Fact]
+    public async Task RefuseToOpenAFolderThatIsNotAFullPath() =>
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => JsonEntryStore.OpenAsync(Path.Combine("relative", "folder"), _clock));
 }
