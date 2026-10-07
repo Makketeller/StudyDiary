@@ -17,13 +17,14 @@ namespace StudyDiary.Data;
 /// The one set of rules every read and write of a profile's files goes
 /// through (ARCHITECTURE): camelCase keys, readable text, enums by name,
 /// and a strict reader that refuses an unknown or repeated key, or a null
-/// where the type forbids one.
+/// where the type forbids one. The version probe alone skips unknown keys.
 /// </summary>
 internal static class StudyDiaryJson
 {
     /// <summary>
     /// The generated context bound to these rules. Read and write through
-    /// its <c>ProfileDto</c> and <c>PayloadDto</c> properties.
+    /// its <c>ProfileDto</c> and <c>PayloadDto</c> properties; read a
+    /// header's version first through <c>VersionProbeDto</c>.
     /// </summary>
     public static StudyDiaryJsonContext Context { get; } = new(CreateOptions());
 

@@ -13,14 +13,16 @@ namespace StudyDiary.Data;
 /// <summary>
 /// What System.Text.Json needs to know about the two files' types,
 /// written by the compiler at build time instead of looked up while
-/// the app runs (ARCHITECTURE). Only the two top-level types are
-/// listed; everything nested inside them follows. Never use
+/// the app runs (ARCHITECTURE). Listed: the two files' top-level types,
+/// whose nested types follow, and the version probe, which reads
+/// <c>profile.json</c> before <c>ProfileDto</c> does. Never use
 /// <c>Default</c>: it carries none of the file's rules. Go through
 /// <see cref="StudyDiaryJson"/>.
 /// </summary>
 [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)]
 [JsonSerializable(typeof(ProfileDto))]
 [JsonSerializable(typeof(PayloadDto))]
+[JsonSerializable(typeof(VersionProbeDto))]
 internal sealed partial class StudyDiaryJsonContext : JsonSerializerContext
 {
 }

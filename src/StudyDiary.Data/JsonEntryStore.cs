@@ -157,6 +157,25 @@ public sealed class JsonEntryStore : IEntryStore
         return (header, payload);
     }
 
+    /// <summary>
+    /// The <c>schemaVersion</c> of a header, read on its own before anything
+    /// else in the file is judged, so a newer file is recognised rather than
+    /// refused as damaged (ARCHITECTURE).
+    /// </summary>
+    /// <exception cref="JsonException">
+    /// The version is missing, repeated, null, not an integer, or below 1.
+    /// </exception>
+    internal static int ReadSchemaVersion(byte[] headerBytes, string headerPath)
+    {
+        var probe = Parse(headerBytes, headerPath, StudyDiaryJson.Context.VersionProbeDto);
+
+        return probe.SchemaVersion >= 1
+            ? probe.SchemaVersion
+            : throw new JsonException(
+                $"{headerPath} has schemaVersion {probe.SchemaVersion}; no release writes below 1.",
+                path: "$.schemaVersion", lineNumber: null, bytePositionInLine: null);
+    }
+
     // A wrong id is a bug in the caller, refused before anything changes
     // (ARCHITECTURE).
     private int IndexOfHeldEntry(Guid id)
@@ -206,15 +225,15 @@ public sealed class JsonEntryStore : IEntryStore
         file.Flush(flushToDisk: true);
     }
 
-    // A file that is only `null` parses without complaint; it is damage.
     private static async Task<T> ReadAsync<T>(string path, JsonTypeInfo<T> typeInfo)
-        where T : class
-    {
-        var bytes = await File.ReadAllBytesAsync(path);
+        where T : class =>
+        Parse(await File.ReadAllBytesAsync(path), path, typeInfo);
 
-        return JsonSerializer.Deserialize(WithoutByteOrderMark(bytes), typeInfo)
+    // A file that is only `null` parses without complaint; it is damage.
+    private static T Parse<T>(byte[] bytes, string path, JsonTypeInfo<T> typeInfo)
+        where T : class =>
+        JsonSerializer.Deserialize(WithoutByteOrderMark(bytes), typeInfo)
             ?? throw new JsonException($"{path} holds only null.");
-    }
 
     // A UTF-8 byte-order mark is skipped, not refused (ARCHITECTURE): some
     // editors add one, and the reader would otherwise call the file damaged.
