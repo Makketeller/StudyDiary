@@ -18,6 +18,10 @@ namespace StudyDiary.Data;
 /// </summary>
 internal sealed class ProfileDto
 {
+
+    /// <summary>The one <c>encryption</c> value this version writes and reads.</summary>
+    public const string NoEncryption = "none";
+
     [JsonRequired]
     public int SchemaVersion { get; set; }
 
@@ -28,5 +32,5 @@ internal sealed class ProfileDto
     public string Name { get; set; } = "";
 
     [JsonRequired]
-    public string Encryption { get; set; } = "none";
+    public string Encryption { get; set; } = NoEncryption;
 }

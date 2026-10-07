@@ -71,7 +71,7 @@ public sealed class JsonEntryStore : IEntryStore
             SchemaVersion = CurrentSchemaVersion,
             Id = Guid.NewGuid(),
             Name = name,
-            Encryption = "none",
+            Encryption = ProfileDto.NoEncryption,
         };
 
         var store = new JsonEntryStore(profileFolder, clock, header, new PayloadDto());
@@ -247,6 +247,15 @@ public sealed class JsonEntryStore : IEntryStore
         byte[] headerBytes, string headerPath, string payloadPath)
     {
         var header = Parse(headerBytes, headerPath, StudyDiaryJson.Context.ProfileDto);
+
+        // A truly encrypted file comes from a newer version and was turned
+        // away by the probe, so anything else here is a hand-edit (ARCHITECTURE).
+        if (header.Encryption != ProfileDto.NoEncryption)
+            throw new JsonException(
+                $"{headerPath} has encryption '{header.Encryption}'; this version reads only "
+                + $"'{ProfileDto.NoEncryption}'.",
+                path: "$.encryption", lineNumber: null, bytePositionInLine: null);
+
         var payload = await ReadAsync(payloadPath, StudyDiaryJson.Context.PayloadDto);
         _ = EntryMapping.ToEntries(payload.Entries);
 
