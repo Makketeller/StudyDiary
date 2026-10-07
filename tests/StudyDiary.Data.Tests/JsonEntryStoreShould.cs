@@ -82,7 +82,7 @@ public class JsonEntryStoreShould : IDisposable
     }
 
     [Fact]
-    public async Task RefuseAProfileFolderThatIsNotAFullPath() =>
+    public async Task RefuseToCreateInAFolderThatIsNotAFullPath() =>
         await Assert.ThrowsAsync<ArgumentException>(
             () => JsonEntryStore.CreateAsync(
                 Path.Combine("relative", "folder"), "Physics", _clock));
