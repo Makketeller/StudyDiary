@@ -64,17 +64,19 @@ public class JsonEntryStoreShould : IDisposable
         Assert.Equal(longAgo, File.GetLastWriteTimeUtc(HeaderPath));
         Assert.Equal(longAgo, File.GetLastWriteTimeUtc(PayloadPath));
     }
-
-    // Rewrites the header as a later version would save it: a higher
-    // schemaVersion and, if asked, a key this app has never seen.
     private void SaveHeaderAsALaterVersion(bool withANewKey)
     {
-        var header = JsonNode.Parse(File.ReadAllText(HeaderPath))!;
-        header["schemaVersion"] = JsonEntryStore.CurrentSchemaVersion + 1;
+        EditHeader("schemaVersion", JsonEntryStore.CurrentSchemaVersion + 1);
 
         if (withANewKey)
-            header["colour"] = "blue";
+            EditHeader("colour", "blue");
+    }
 
+    // Changes one key of the saved header, as a hand-edit would.
+    private void EditHeader(string key, JsonNode? value)
+    {
+        var header = JsonNode.Parse(File.ReadAllText(HeaderPath))!;
+        header[key] = value;
         File.WriteAllText(HeaderPath, header.ToJsonString());
     }
 
@@ -265,6 +267,21 @@ public class JsonEntryStoreShould : IDisposable
             () => JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath));
 
         Assert.Equal("$.schemaVersion", refusal.Path);
+    }
+
+    [Theory]
+    [InlineData("aes-256-gcm")]
+    [InlineData("None")]
+    [InlineData("")]
+    public async Task FailTheCheckForAnEncryptionOtherThanNone(string encryption)
+    {
+        await CreateStoreAsync();
+        EditHeader("encryption", encryption);
+
+        var refusal = await Assert.ThrowsAsync<JsonException>(
+            () => JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath));
+
+        Assert.Equal("$.encryption", refusal.Path);
     }
 
     [Fact]
