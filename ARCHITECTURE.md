@@ -629,7 +629,7 @@ used: a wrong shape there throws `InvalidOperationException` or `KeyNotFoundExce
 this file treats as bugs, and the key name would be a loose string outside the naming policy.
 
 **Data owns `profile.json` outright; App sees outcomes, never the header.** `IEntryStore` has no
-open method, so it stays about entries. A store is made by one of two static factories on the
+open method, so it stays about entries. A store is made by one of three static factories on the
 implementation, behind a private constructor, so no half-loaded store can exist:
 
 - **Open** reads and checks, and never creates or changes the profile's two files. Nothing of
@@ -638,11 +638,22 @@ implementation, behind a private constructor, so no half-loaded store can exist:
   because a diary lived there. Then the version is read on its own (above), the header strictly,
   and the payload strictly through the mapping. `encryption` must be `"none"`: anything else is a
   hand-edit, since a genuinely encrypted file is always written by a newer version and refused
-  first. On damage the damaged file is copied aside before Open returns. No profile here, newer
-  and damaged are expected outcomes, so they come back as a result, not as exceptions.
+  first. On damage the damaged file is copied aside, then the recovery copies are tried newest
+  first through the same check until one passes, all before Open returns: the dialog cannot be
+  worded until App knows whether a copy exists. No profile here, newer and damaged are expected
+  outcomes, so they come back as a result, not as exceptions.
 - **Create** writes both files and the first recovery copy, with a name App supplies, and
   refuses, as a bug, if anything of ours is already in the folder, so a first run can never
   overwrite a diary.
+- **Restore** puts a recovery copy back, and is called only after the user accepts it
+  (DESIGN §7). Open looks and Restore touches, so nothing changes before the user answers. The
+  copy is read and checked again, since it may have changed while the question was open, then
+  saved through the ordinary save, so a restore is written, read back and copied like any other
+  change. A copy that no longer passes throws `InvalidOperationException` for the last-resort
+  handler: the user changed it under an open dialog, the diary is unchanged, and the next Open
+  offers the next copy, so a result type for it would be code for a case no one meets. App names
+  a copy only through a `RecoveryCopy` that Data made: it can read when the copy was taken, and
+  cannot point Restore at a file of its own.
 
 "No profile yet" and "a profile that will not load" therefore never share a code path: they are
 different methods. A `TryLoad` that falls back to an empty profile on failure is the exact shape
@@ -652,14 +663,14 @@ small piece inside Data, so the picker can read headers without opening a payloa
 **Open returns one of four cases, each holding only what its case needs.** `OpenOutcome` is an
 abstract record with a private constructor and one sealed nested record per outcome: `Opened`
 holds the store, `NoProfile` holds nothing, `Newer` holds the file's `schemaVersion` and the
-highest this app reads, so `CurrentSchemaVersion` never leaves Data, and `Damaged` holds what
-its message needs (DESIGN §7). An enum plus nullable fields was rejected: "the store is set only
-when the profile opened" would be a rule to remember rather than a shape, and reading it in the
-wrong case is a null at run time. App tells the cases apart with a `switch` whose default arm
-throws, because on this C# version the compiler cannot see that the cases are all there are;
-C# 15's `closed` modifier would make that check the compiler's (checked 2026-10). `Opened`
-holds, and Create returns, an `IEntryStore`, so App names the JSON implementation once, at
-startup.
+highest this app reads, so `CurrentSchemaVersion` never leaves Data, and `Damaged` holds the
+details, where the damaged file was kept, and the newest recovery copy that passed, or none
+(DESIGN §7). An enum plus nullable fields was rejected: "the store is set only when the profile
+opened" would be a rule to remember rather than a shape, and reading it in the wrong case is a
+null at run time. App tells the cases apart with a `switch` whose default arm throws, because on
+this C# version the compiler cannot see that the cases are all there are; C# 15's `closed`
+modifier would make that check the compiler's (checked 2026-10). `Opened` holds, and Create
+returns, an `IEntryStore`, so App names the JSON implementation once, at startup.
 
 **A missing attachment is not a parse failure.** It renders as a visible placeholder in that one
 entry and changes nothing else. The entry keeps its reference, and the payload is never rewritten to
