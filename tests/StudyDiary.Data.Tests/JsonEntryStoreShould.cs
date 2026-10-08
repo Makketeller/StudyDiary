@@ -448,6 +448,19 @@ public class JsonEntryStoreShould : IDisposable
         Assert.Equal("payload.json", refusal.FileName);
     }
 
+        [Fact]
+    public async Task NamePayloadJsonWhenAnEntryIsRefused()
+    {
+        var store = await CreateStoreAsync();
+        await store.AddAsync(AnEntry());
+        EditFile(PayloadPath, payload => payload["entries"]![0]!["reviewState"]!["box"] = 0);
+
+        var refusal = await Assert.ThrowsAsync<RefusedFileException>(
+            () => JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath));
+
+        Assert.Equal("payload.json", refusal.FileName);
+    }
+
     // Pins .NET's own count: the unit test of the +1 would still pass if
     // .NET started counting lines from 1.
     [Fact]
@@ -490,7 +503,6 @@ public class JsonEntryStoreShould : IDisposable
 
         Assert.Equal(fileName, damaged.Detail.FileName);
     }
-
 
     [Fact]
     public async Task KeepBothFilesAsFoundWhenTheProfileIsDamaged()
@@ -569,7 +581,6 @@ public class JsonEntryStoreShould : IDisposable
 
         Assert.Equal(new DateTime(2026, 10, 6, 0, 30, 0), damaged.NewestPassingCopy?.TakenAt);
     }
-
 
     // The dev-build case: a newer version's copy must never be put back.
     [Fact]
@@ -688,19 +699,6 @@ public class JsonEntryStoreShould : IDisposable
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => JsonEntryStore.RestoreAsync(Path.Combine("relative", "folder"), copy, _clock));
-    }
-
-    [Fact]
-    public async Task NamePayloadJsonWhenAnEntryIsRefused()
-    {
-        var store = await CreateStoreAsync();
-        await store.AddAsync(AnEntry());
-        EditFile(PayloadPath, payload => payload["entries"]![0]!["reviewState"]!["box"] = 0);
-
-        var refusal = await Assert.ThrowsAsync<RefusedFileException>(
-            () => JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath));
-
-        Assert.Equal("payload.json", refusal.FileName);
     }
 
     [Fact]

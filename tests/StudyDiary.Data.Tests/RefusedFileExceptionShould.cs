@@ -23,7 +23,6 @@ public class RefusedFileExceptionShould
         Assert.Equal(new DamageDetail("payload.json", 3, "$.dayLogs", "broken"), detail);
     }
 
-
     [Fact]
     public void GiveNoLineInItsDamageDetailWhenTheCauseHasNone()
     {
@@ -34,5 +33,4 @@ public class RefusedFileExceptionShould
 
         Assert.Null(detail.Line);
     }
-
 }
