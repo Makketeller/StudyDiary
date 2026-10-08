@@ -6,6 +6,8 @@
 // Free Software Foundation, either version 3 of the License, or (at your
 // option) any later version. See LICENSE for details.
 
+using System.Globalization;
+
 namespace StudyDiary.Data;
 
 /// <summary>
@@ -38,4 +40,28 @@ public static class DataLayout
             AppFolderName,
             ProfilesFolderName,
             DefaultProfileFolderName);
+
+    // A folder name of ours: a timestamp, alone or followed by _2, _3. Every
+    // field of the timestamp is fixed-width, so it is exactly as long as its
+    // format string. Null for any other name (ARCHITECTURE).
+    internal static (DateTime Time, int Counter)? ReadTimestampedName(string name)
+    {
+        var stampLength = TimestampFormat.Length;
+
+        if (name.Length < stampLength
+            || !DateTime.TryParseExact(name[..stampLength], TimestampFormat,
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out var time))
+            return null;
+
+        var suffix = name[stampLength..];
+        if (suffix.Length == 0)
+            return (time, 1);
+
+        return suffix[0] == '_'
+            && int.TryParse(suffix[1..], NumberStyles.None, CultureInfo.InvariantCulture,
+                out var counter)
+            && counter >= 2
+                ? (time, counter)
+                : null;
+    }
 }

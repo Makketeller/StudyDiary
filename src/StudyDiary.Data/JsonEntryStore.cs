@@ -312,12 +312,22 @@ public sealed class JsonEntryStore : IEntryStore
         string profileFolder, string folderName, TimeProvider clock)
     {
         var parent = Path.Combine(profileFolder, folderName);
-        var name = clock.GetLocalNow().ToString(
+                var stamp = clock.GetLocalNow().ToString(
             DataLayout.TimestampFormat, CultureInfo.InvariantCulture);
 
-        var copyFolder = Path.Combine(parent, name);
-        for (var n = 2; Directory.Exists(copyFolder); n++)
-            copyFolder = Path.Combine(parent, $"{name}_{n}");
+        // One past the highest counter this second already has, never a gap
+        // left by pruning: a reused lower number would sort the newest copy
+        // among the oldest (ARCHITECTURE).
+        var highest = Directory.Exists(parent)
+            ? Directory.GetDirectories(parent)
+                .Select(path => Path.GetFileName(path))
+                .Where(name => name.StartsWith(stamp, StringComparison.Ordinal))
+                .Select(name => DataLayout.ReadTimestampedName(name)?.Counter ?? 0)
+                .DefaultIfEmpty(0)
+                .Max()
+            : 0;
+
+        var copyFolder = Path.Combine(parent, highest == 0 ? stamp : $"{stamp}_{highest + 1}");
 
         Directory.CreateDirectory(copyFolder);
 

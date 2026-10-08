@@ -6,8 +6,6 @@
 // Free Software Foundation, either version 3 of the License, or (at your
 // option) any later version. See LICENSE for details.
 
-using System.Globalization;
-
 namespace StudyDiary.Data;
 
 /// <summary>
@@ -37,28 +35,13 @@ public sealed record RecoveryCopy
     // for _2, _3.
     internal int Counter { get; }
 
-    // Null unless the name is ours: a timestamp, alone or followed by _2,
-    // _3 (ARCHITECTURE). Every field of the timestamp is fixed-width, so it
-    // is exactly as long as its format string.
+    // Null unless the folder's name is one of ours (ARCHITECTURE).
     internal static RecoveryCopy? FromFolder(string folder)
     {
-        var name = Path.GetFileName(folder);
-        var stampLength = DataLayout.TimestampFormat.Length;
+        var name = DataLayout.ReadTimestampedName(Path.GetFileName(folder));
 
-        if (name.Length < stampLength
-            || !DateTime.TryParseExact(name[..stampLength], DataLayout.TimestampFormat,
-                CultureInfo.InvariantCulture, DateTimeStyles.None, out var takenAt))
-            return null;
-
-        var suffix = name[stampLength..];
-        if (suffix.Length == 0)
-            return new RecoveryCopy(folder, takenAt, counter: 1);
-
-        return suffix[0] == '_'
-            && int.TryParse(suffix[1..], NumberStyles.None, CultureInfo.InvariantCulture,
-                out var counter)
-            && counter >= 2
-                ? new RecoveryCopy(folder, takenAt, counter)
-                : null;
+        return name is null
+            ? null
+            : new RecoveryCopy(folder, name.Value.Time, name.Value.Counter);
     }
 }
