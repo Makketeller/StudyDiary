@@ -323,6 +323,25 @@ public class JsonEntryStoreShould : IDisposable
         Assert.Equal("payload.json", refusal.FileName);
     }
 
+    // Pins .NET's own count: the unit test of the +1 would still pass if
+    // .NET started counting lines from 1.
+    [Fact]
+    public async Task GiveTheLineOfABrokenPayloadAsAnEditorCountsIt()
+    {
+        await CreateStoreAsync();
+        File.WriteAllText(PayloadPath, """
+            {
+              "entries": [],
+              "dayLogs": [,]
+            }
+            """);
+
+        var refusal = await Assert.ThrowsAsync<RefusedFileException>(
+            () => JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath));
+
+        Assert.Equal<long?>(3, refusal.ToDamageDetail().Line);
+    }
+
     [Fact]
     public async Task NamePayloadJsonWhenAnEntryIsRefused()
     {
