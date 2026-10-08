@@ -9,17 +9,17 @@
 namespace StudyDiary.Data.Tests;
 
 /// <summary>
-/// A clock that never moves, in a time zone that never changes, so no
-/// test depends on when or where it runs (ARCHITECTURE). The zone is a
-/// fixed offset taken from the instant it is given, with no daylight
-/// saving.
+/// A clock that moves only when a test moves it, in a time zone that never
+/// changes, so no test depends on when or where it runs (ARCHITECTURE). The
+/// zone is a fixed offset taken from the instant it is given, with no
+/// daylight saving.
 /// </summary>
-internal sealed class FixedTimeProvider : TimeProvider
+internal sealed class ManualTimeProvider : TimeProvider
 {
-    private readonly DateTimeOffset _now;
     private readonly TimeZoneInfo _zone;
+    private DateTimeOffset _now;
 
-    public FixedTimeProvider(DateTimeOffset now)
+    public ManualTimeProvider(DateTimeOffset now)
     {
         _now = now;
         _zone = TimeZoneInfo.CreateCustomTimeZone(
@@ -29,4 +29,7 @@ internal sealed class FixedTimeProvider : TimeProvider
     public override DateTimeOffset GetUtcNow() => _now.ToUniversalTime();
 
     public override TimeZoneInfo LocalTimeZone => _zone;
+
+    /// <summary>Moves the clock forward, as if that much time had passed.</summary>
+    public void Advance(TimeSpan by) => _now += by;
 }

@@ -26,7 +26,7 @@ public class JsonEntryStoreShould : IDisposable
     private readonly string _folder =
         Directory.CreateTempSubdirectory("studydiary-test-").FullName;
 
-    private readonly FixedTimeProvider _clock = new(Instant);
+    private readonly ManualTimeProvider _clock = new(Instant);
 
     public void Dispose() => Directory.Delete(_folder, recursive: true);
 

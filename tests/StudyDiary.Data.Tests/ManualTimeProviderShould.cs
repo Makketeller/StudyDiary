@@ -8,7 +8,7 @@
 
 namespace StudyDiary.Data.Tests;
 
-public class FixedTimeProviderShould
+public class ManualTimeProviderShould
 {
     // Half past midnight at +09:00: an offset no Swedish machine has, and
     // still 1 October in UTC, so code reading the wrong clock gets the
@@ -19,11 +19,21 @@ public class FixedTimeProviderShould
     [Fact]
     public void ReportTheGivenInstantInItsOwnOffset()
     {
-        var clock = new FixedTimeProvider(Instant);
+        var clock = new ManualTimeProvider(Instant);
 
         var now = clock.GetLocalNow();
 
         Assert.Equal(Instant, now);
         Assert.Equal(Instant.Offset, now.Offset);
+    }
+
+    [Fact]
+    public void MoveForwardByWhatItIsAdvanced()
+    {
+        var clock = new ManualTimeProvider(Instant);
+
+        clock.Advance(TimeSpan.FromDays(1));
+
+        Assert.Equal(Instant.AddDays(1), clock.GetLocalNow());
     }
 }
