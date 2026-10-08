@@ -125,9 +125,14 @@ public sealed class JsonEntryStore : IEntryStore
         catch (RefusedFileException refusal)
         {
             // Kept before anything is said, so the folder in the message is
-            // real whatever the user answers (DESIGN §7).
-            var keptAt = CopyProfileFiles(profileFolder, DataLayout.DamagedFolderName, clock);
-            return new OpenOutcome.Damaged(refusal.ToDamageDetail(), keptAt);
+            // real whatever the user answers; with neither file there,
+            // nothing is kept (DESIGN §7).
+            var keptAt = HoldsAProfileFile(profileFolder)
+                ? CopyProfileFiles(profileFolder, DataLayout.DamagedFolderName, clock)
+                : null;
+
+            return new OpenOutcome.Damaged(
+                refusal.ToDamageDetail(), keptAt, await NewestPassingCopyAsync(profileFolder));
         }
     }
 
@@ -304,6 +309,26 @@ public sealed class JsonEntryStore : IEntryStore
         }
     }
 
+        // Newest first through the full check, so a copy saved by a newer build
+    // is passed over like a damaged one (ARCHITECTURE). Null when none passes.
+    private static async Task<RecoveryCopy?> NewestPassingCopyAsync(string profileFolder)
+    {
+        foreach (var copy in Enumerable.Reverse(RecoveryCopies(profileFolder)))
+        {
+            try
+            {
+                await ReadAndCheckAsync(HeaderPath(copy.Folder), PayloadPath(copy.Folder));
+                return copy;
+            }
+            catch (RefusedFileException)
+            {
+                // This copy is refused too; try the next older one.
+            }
+        }
+
+        return null;
+    }
+
     // Both files as they are now, byte for byte, into a new folder under the
     // profile's folderName folder, named for this moment (DESIGN §7). A name
     // already taken, as when two copies fall in one second, gets _2, _3; a
@@ -346,13 +371,7 @@ public sealed class JsonEntryStore : IEntryStore
     // folders whose names are ours are ever deleted.
     private static void PruneRecoveryCopies(string profileFolder)
     {
-        var copies = Directory
-            .GetDirectories(Path.Combine(profileFolder, DataLayout.RecoveryFolderName))
-            .Select(RecoveryCopy.FromFolder)
-            .OfType<RecoveryCopy>()
-            .OrderBy(copy => copy.TakenAt)
-            .ThenBy(copy => copy.Counter)
-            .ToList();
+        var copies = RecoveryCopies(profileFolder);
 
         var newest = copies.TakeLast(NewestCopiesKept);
         var firstOfEachDay = copies
@@ -364,6 +383,23 @@ public sealed class JsonEntryStore : IEntryStore
 
         foreach (var copy in copies.Where(copy => !kept.Contains(copy)))
             Directory.Delete(copy.Folder, recursive: true);
+    }
+
+    // The app's own copies in recovery/, oldest first by time and then
+    // counter; folders whose names are not ours are not among them
+    // (ARCHITECTURE).
+    private static List<RecoveryCopy> RecoveryCopies(string profileFolder)
+    {
+        var recovery = Path.Combine(profileFolder, DataLayout.RecoveryFolderName);
+        if (!Directory.Exists(recovery))
+            return [];
+
+        return Directory.GetDirectories(recovery)
+            .Select(RecoveryCopy.FromFolder)
+            .OfType<RecoveryCopy>()
+            .OrderBy(copy => copy.TakenAt)
+            .ThenBy(copy => copy.Counter)
+            .ToList();
     }
 
     // Each file's part of the check catches whatever it refuses and names the
@@ -426,8 +462,13 @@ public sealed class JsonEntryStore : IEntryStore
                 "The profile folder must be a full path.", nameof(profileFolder));
     }
 
-    private static bool HoldsAnythingOfOurs(string profileFolder) =>
+    private static bool HoldsAProfileFile(string profileFolder) =>
         File.Exists(HeaderPath(profileFolder)) || File.Exists(PayloadPath(profileFolder));
+
+    // A recovery copy counts, since a diary lived here; damaged/ does not,
+    // being an archive (ARCHITECTURE).
+    private static bool HoldsAnythingOfOurs(string profileFolder) =>
+        HoldsAProfileFile(profileFolder) || RecoveryCopies(profileFolder).Count > 0;
 
     private static string HeaderPath(string folder) =>
         Path.Combine(folder, DataLayout.HeaderFileName);

@@ -30,9 +30,12 @@ public abstract record OpenOutcome
     public sealed record Newer(int FileSchemaVersion, int SupportedSchemaVersion) : OpenOutcome;
 
     /// <summary>
-    /// The profile would not load. Both files were kept aside before this was
-    /// returned, so <see cref="KeptAt"/> is a real folder whatever the user
-    /// answers (DESIGN §7).
+    /// The profile would not load (DESIGN §7). Both files were kept aside
+    /// before this was returned, so <see cref="KeptAt"/> is a real folder,
+    /// or null when neither file was there to keep.
+    /// <see cref="NewestPassingCopy"/> is the newest recovery copy that
+    /// passed the same check, or null when none did.
     /// </summary>
-    public sealed record Damaged(DamageDetail Detail, string KeptAt) : OpenOutcome;
+    public sealed record Damaged(
+        DamageDetail Detail, string? KeptAt, RecoveryCopy? NewestPassingCopy) : OpenOutcome;
 }
