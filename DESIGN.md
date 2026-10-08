@@ -504,10 +504,9 @@ own integer rather than a copy of the app version, because minors restart at eve
   rather than loading a partial object and saving it back with the unknown fields dropped.
   Silent field-dropping on save is the one way a local-first app destroys data it was trusted
   with. The message says the file was saved by a newer version and asks the user to update.
-  Below it, collapsed like the details on a damaged file (below), sit the
-  two format numbers: the file's and the highest this app reads. Most
-  users never need them. They are what shows that a development build
-  wrote the file, when no newer release exists to update to.
+  Below it, collapsed like the details on a damaged file (below), sit the two format numbers:
+  the file's and the highest this app reads. Most users never need them. They are what shows
+  that a development build wrote the file, when no newer release exists to update to.
 - **Why every release, and not only the ones that change the file.** Both close the hole (§13),
   but bumping only on a format change needs a judgement at every release, and one missed
   judgement reopens it. Bumping every time needs none. The cost is that an older app refuses
@@ -567,19 +566,16 @@ the app keeps its own copies and offers one back.
   > Your diary couldn't be opened, so nothing has been changed. StudyDiary keeps its own
   > copies, and the most recent one is from today at 14:30. Open that copy instead?
   >
-  > The damaged files has been kept at `…`. You can look at it yourself if you want to.
+  > The damaged files have been kept at `…`. You can look at them yourself if you want to.
 
   It leads with *nothing has been changed* because that is true, and it is what someone who has
-  just broken something needs to hear first. Declining changes nothing further, and
-  the profile stays closed.
-  Below the message, collapsed, sit **details for fixing the file by
-  hand**: which file was refused, the line where reading stopped when
-  there is one, where in the file, and the reader's own message.
-  Collapsed, because someone who never touched the file has no use for
-  them; there, because someone who did can fix a typo in seconds rather
-  than lose their edit to a copy. The reader's wording is shown as it
-  is, not translated: it is written for developers and changes between
-  .NET versions, so matching on it would break silently.
+  just broken something needs to hear first. Declining changes nothing further, and the profile
+  stays closed. Below the message, collapsed, sit **details for fixing the file by hand**: which
+  file was refused, the line where reading stopped when there is one, where in the file, and the
+  reader's own message. Collapsed, because someone who never touched the file has no use for
+  them; there, because someone who did can fix a typo in seconds rather than lose their edit to
+  a copy. The reader's wording is shown as it is, not translated: it is written for developers
+  and changes between .NET versions, so matching on it would break silently.
 - **The damaged file is kept, never deleted.** It is copied aside *before* the question is
   asked, so the path in the message is real whichever answer the user gives. They may have
   made deliberate edits worth salvaging, or know someone who can fix it — the same reasoning
