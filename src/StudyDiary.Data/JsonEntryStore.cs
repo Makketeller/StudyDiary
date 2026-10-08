@@ -59,9 +59,9 @@ public sealed class JsonEntryStore : IEntryStore
     /// <exception cref="ArgumentException">
     /// The folder is not a full path.
     /// </exception>
-      /// <exception cref="InvalidOperationException">
-      /// The folder already holds a profile file or a recovery copy. Nothing is changed.
-      /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// The folder already holds a profile file or a recovery copy. Nothing is changed.
+    /// </exception>
     public static async Task<IEntryStore> CreateAsync(
         string profileFolder, string name, TimeProvider clock)
     {
