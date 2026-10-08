@@ -575,6 +575,17 @@ bug in this app, not damage, so the save wraps the `JsonException` in an
 as evidence for the next save to overwrite, and no `JsonException` ever leaves a save, so a bug
 cannot be mistaken for a damaged file.
 
+**A recovery copy is taken after every save, then older ones are pruned** (DESIGN §7). Once both
+renames are done, the two live files are copied into a new folder under `recovery/`, named by
+local time and suffixed `_2`, `_3` like `damaged/`, so the newest copy is always the last save
+that passed the read-back. A crash between the renames and the copy loses nothing: the live
+files are good, and the next save copies them. A copy's age is read from its folder name, never
+from file dates, which change when a folder is copied or backed up, and names are compared as a
+time and then a counter, since as plain text `_10` sorts before `_2`. Pruning keeps the newest
+twenty-five and the first copy of each of the seven latest days that have one, which are the
+days the app saved, and deletes nothing else: a folder in `recovery/` whose name is not one of
+ours is left alone, because the app deletes only what it can tell it made.
+
 **A bug stops the app with a message, never a vanishing window.** Code that meets a bug does
 not catch it where it happens; the exception travels up to one last-resort handler in App,
 which says plainly what was not saved and that the diary file is unchanged, then closes.
@@ -645,15 +656,17 @@ implementation, behind a private constructor, so no half-loaded store can exist:
 
 - **Open** reads and checks, and never creates or changes the profile's two files. Nothing of
   ours in the folder (no `profile.json`, no `payload.json`, no recovery copy) is reported as no
-  profile here. Anything else missing is damage, including both files gone while copies remain,
-  because a diary lived there. Then the version is read on its own (above), the header strictly,
-  and the payload strictly through the mapping. `encryption` must be `"none"`: anything else is a
-  hand-edit, since a genuinely encrypted file is always written by a newer version and refused
-  first. On damage both files, as found, are copied into a new folder under `damaged/` named by
-  local time, a taken name getting `_2`, `_3`; then the recovery copies are tried newest first
-  through the same check until one passes, all before Open returns: the dialog cannot be worded
-  until App knows whether a copy exists. No profile here, newer and damaged are expected
-  outcomes, so they come back as a result, not as exceptions.
+  profile here; `damaged/` does not count, being an archive rather than a diary, and counting it
+  would refuse a fresh start with nothing to offer instead. Anything else missing is damage,
+  including both files gone while copies remain, because a diary lived there. Then the version
+  is read on its own (above), the header strictly, and the payload strictly through the mapping.
+  `encryption` must be `"none"`: anything else is a hand-edit, since a genuinely encrypted file is
+  always written by a newer version and refused first. On damage both files, as found, are copied
+  into a new folder under `damaged/` named by local time, a taken name getting `_2`, `_3`; then
+  the recovery copies are tried newest first through the same check until one passes, all before
+  Open returns: the dialog cannot be worded until App knows whether a copy exists. No profile
+  here, newer and damaged are expected outcomes, so they come back as a result, not as
+  exceptions.
 - **Create** writes both files and the first recovery copy, with a name App supplies, and
   refuses, as a bug, if anything of ours is already in the folder, so a first run can never
   overwrite a diary.
@@ -728,10 +741,10 @@ launched from (checked 2026-10). One static class in Data holds every folder and
 turns that root into a profile's folder. The store takes its profile folder and the
 `TimeProvider` (§4) as required constructor parameters, with no defaults, and refuses a path
 that is not fully qualified. Nothing in Data looks either up, so no test can reach the real data
-folder: each hands the store a fresh temporary folder and a fixed clock, a small `TimeProvider`
-subclass in the test project rather than a testing package. The store is given a profile's
-folder rather than the root, so profiles (DESIGN §6) add a way to choose a folder and leave the
-store unchanged.
+folder: each hands the store a fresh temporary folder and a clock that moves only when the test
+moves it, a small `TimeProvider` subclass in the test project rather than a testing package. The
+store is given a profile's folder rather than the root, so profiles (DESIGN §6) add a way to
+choose a folder and leave the store unchanged.
 
 **Migration code lives here, behind `IEntryStore`** — never in Domain (DESIGN §7).
 

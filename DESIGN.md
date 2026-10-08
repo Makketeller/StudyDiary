@@ -544,7 +544,10 @@ the app keeps its own copies and offers one back.
   just out of the way and named for what they are. Each is a byte-for-byte copy of `profile.json`
   and `payload.json` taken together, so a copy of the payload *is* the payload for the two rules
   above: if the payload is ever encrypted, so are its copies. Attachments are not copied; a save
-  never rewrites them, and a missing one already has its own answer.
+  never rewrites them, and a missing one already has its own answer. Each copy is a folder
+  holding the two files, named for when it was taken like a damaged folder
+  (`2026-10-08_14-30-12`), and is taken once a save has succeeded, so the newest copy is always
+  the last good save.
 - **A copy is taken at every save, and two kinds are kept:** the newest twenty-five, and the
   first copy of each of the last seven days the app was used. The newest copy alone means a
   hand-edit loses nothing; twenty-five is more than one review session at the default cap,
