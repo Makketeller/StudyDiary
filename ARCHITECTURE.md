@@ -516,6 +516,14 @@ is a bug in this app, and must crash rather than be reported as damage and send 
 recovery copy. The mapping also refuses what no constructor can see: a null inside a list, and
 two entries sharing an id, which would leave update and delete not knowing which one they mean.
 
+**Every refusal names its file.** The check runs in three parts, each about one file: the version
+probe of `profile.json`, its strict read, and the strict read and mapping of `payload.json`. Each
+part catches whatever it refuses and rethrows it as a `RefusedFileException`, a `JsonException`
+that also carries the file's name, so the damage signal is unchanged and the details can say which
+file to open (DESIGN §7). The name goes on where the file is known rather than being worked out
+afterwards, so a check added inside a part is named without anyone remembering to. The one
+refusal outside the parts, a newer version in the full check, is built already named.
+
 **Serialization is source-generated, through one shared `JsonSerializerOptions`.** Data holds
 exactly one options instance, and every read and write passes through it. Its resolver is a
 generated `JsonSerializerContext` naming the two root DTOs and the version probe, and nothing else: no reflection
