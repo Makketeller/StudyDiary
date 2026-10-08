@@ -18,7 +18,6 @@ namespace StudyDiary.Data;
 /// </summary>
 internal sealed class ProfileDto
 {
-
     /// <summary>The one <c>encryption</c> value this version writes and reads.</summary>
     public const string NoEncryption = "none";
 
