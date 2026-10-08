@@ -16,5 +16,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\StudyDiary.Domain\StudyDiary.Domain.csproj" />
+    <ProjectReference Include="..\StudyDiary.Data\StudyDiary.Data.csproj" />
   </ItemGroup>
 </Project>
