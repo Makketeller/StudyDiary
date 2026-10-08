@@ -87,9 +87,15 @@ public class JsonEntryStoreShould : IDisposable
     private void EditHeader(string key, JsonNode? value) =>
         EditFile(HeaderPath, header => header[key] = value);
 
-    // A syntax error in payload.json, as a bad hand-edit leaves it.
-    private void BreakThePayload() =>
-        File.WriteAllText(PayloadPath, """{ "entries": [, ] }""");
+    // A syntax error, as a bad hand-edit leaves a file.
+    private static void Break(string path) =>
+        File.WriteAllText(path, """{ "entries": [, ] }""");
+
+    private void BreakThePayload() => Break(PayloadPath);
+
+    // A recovery copy's folder, by its name.
+    private string RecoveryCopyFolder(string name) =>
+        Path.Combine(_folder, "recovery", name);
 
     // Opens the folder afresh and requires the damaged outcome.
     private async Task<OpenOutcome.Damaged> OpenDamagedAsync() =>
@@ -496,6 +502,8 @@ public class JsonEntryStoreShould : IDisposable
 
         var damaged = await OpenDamagedAsync();
 
+        Assert.NotNull(damaged.KeptAt);
+
         Assert.Equal(header, File.ReadAllBytes(Path.Combine(damaged.KeptAt, "profile.json")));
         Assert.Equal(payload, File.ReadAllBytes(Path.Combine(damaged.KeptAt, "payload.json")));
     }
@@ -535,6 +543,93 @@ public class JsonEntryStoreShould : IDisposable
 
         Assert.Equal(header, File.ReadAllBytes(HeaderPath));
         Assert.Equal(payload, File.ReadAllBytes(PayloadPath));
+    }
+
+    [Fact]
+    public async Task OfferTheNewestCopyThatPasses()
+    {
+        var store = await CreateStoreAsync();
+        await SaveAfterAsync(store, TimeSpan.FromHours(1));
+        BreakThePayload();
+
+        var damaged = await OpenDamagedAsync();
+
+        Assert.Equal(new DateTime(2026, 10, 6, 1, 30, 0), damaged.NewestPassingCopy?.TakenAt);
+    }
+
+    [Fact]
+    public async Task PassOverACopyThatIsDamagedToo()
+    {
+        var store = await CreateStoreAsync();
+        await SaveAfterAsync(store, TimeSpan.FromHours(1));
+        Break(Path.Combine(RecoveryCopyFolder("2026-10-06_01-30-00"), "payload.json"));
+        BreakThePayload();
+
+        var damaged = await OpenDamagedAsync();
+
+        Assert.Equal(new DateTime(2026, 10, 6, 0, 30, 0), damaged.NewestPassingCopy?.TakenAt);
+    }
+
+
+    // The dev-build case: a newer version's copy must never be put back.
+    [Fact]
+    public async Task PassOverACopySavedByALaterVersion()
+    {
+        var store = await CreateStoreAsync();
+        await SaveAfterAsync(store, TimeSpan.FromHours(1));
+        EditFile(
+            Path.Combine(RecoveryCopyFolder("2026-10-06_01-30-00"), "profile.json"),
+            header => header["schemaVersion"] = JsonEntryStore.CurrentSchemaVersion + 1);
+        BreakThePayload();
+
+        var damaged = await OpenDamagedAsync();
+
+        Assert.Equal(new DateTime(2026, 10, 6, 0, 30, 0), damaged.NewestPassingCopy?.TakenAt);
+    }
+
+    [Fact]
+    public async Task OfferNoCopyWhenNonePasses()
+    {
+        await CreateStoreAsync();
+        Break(Path.Combine(RecoveryCopyFolder("2026-10-06_00-30-00"), "payload.json"));
+        BreakThePayload();
+
+        var damaged = await OpenDamagedAsync();
+
+        Assert.Null(damaged.NewestPassingCopy);
+    }
+
+    [Fact]
+    public async Task ReportDamagedWhenOnlyRecoveryCopiesRemain()
+    {
+        await CreateStoreAsync();
+        File.Delete(HeaderPath);
+        File.Delete(PayloadPath);
+
+        var damaged = await OpenDamagedAsync();
+
+        Assert.Null(damaged.KeptAt);
+        Assert.NotNull(damaged.NewestPassingCopy);
+        Assert.False(Directory.Exists(Path.Combine(_folder, "damaged")));
+    }
+
+    [Fact]
+    public async Task ReportNoProfileWhenOnlyDamagedFilesRemain()
+    {
+        Directory.CreateDirectory(Path.Combine(_folder, "damaged", "2026-10-06_00-30-00"));
+
+        var outcome = await JsonEntryStore.OpenAsync(_folder, _clock);
+
+        Assert.IsType<OpenOutcome.NoProfile>(outcome);
+    }
+
+    [Fact]
+    public async Task RefuseToCreateOverRecoveryCopies()
+    {
+        Directory.CreateDirectory(RecoveryCopyFolder("2026-10-06_00-30-00"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => JsonEntryStore.CreateAsync(_folder, "Physics", _clock));
     }
 
     [Fact]
