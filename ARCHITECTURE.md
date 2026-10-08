@@ -521,7 +521,9 @@ part catches whatever it refuses and rethrows it as a `RefusedFileException`, a 
 that also carries the file's name, so the damage signal is unchanged and the details can say which
 file to open (DESIGN §7). The name goes on where the file is known rather than being worked out
 afterwards, so a check added inside a part is named without anyone remembering to. The one
-refusal outside the parts, a newer version in the full check, is built already named.
+refusal outside the parts, a newer version in the full check, is built already named. A refusal
+turns itself into the `DamageDetail` that `Damaged` carries, the one place where .NET's line
+count, from 0, becomes an editor's, from 1.
 
 **Serialization is source-generated, through one shared `JsonSerializerOptions`.** Data holds
 exactly one options instance, and every read and write passes through it. Its resolver is a

@@ -575,7 +575,9 @@ the app keeps its own copies and offers one back.
   reader's own message. Collapsed, because someone who never touched the file has no use for
   them; there, because someone who did can fix a typo in seconds rather than lose their edit to
   a copy. The reader's wording is shown as it is, not translated: it is written for developers
-  and changes between .NET versions, so matching on it would break silently.
+  and changes between .NET versions, so matching on it would break silently. The line is
+  counted from 1, as editors count; the reader's message counts from 0 in its own text, and the
+  details say so beside it rather than rewrite it.
 - **The damaged file is kept, never deleted.** It is copied aside *before* the question is
   asked, so the path in the message is real whichever answer the user gives. They may have
   made deliberate edits worth salvaging, or know someone who can fix it — the same reasoning
