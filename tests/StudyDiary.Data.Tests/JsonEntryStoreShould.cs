@@ -64,6 +64,9 @@ public class JsonEntryStoreShould : IDisposable
         Assert.Equal(longAgo, File.GetLastWriteTimeUtc(HeaderPath));
         Assert.Equal(longAgo, File.GetLastWriteTimeUtc(PayloadPath));
     }
+
+    // Rewrites the header as a later version would save it: a higher
+    // schemaVersion and, if asked, a key this app has never seen.
     private void SaveHeaderAsALaterVersion(bool withANewKey)
     {
         EditHeader("schemaVersion", JsonEntryStore.CurrentSchemaVersion + 1);
@@ -72,13 +75,17 @@ public class JsonEntryStoreShould : IDisposable
             EditHeader("colour", "blue");
     }
 
-    // Changes one key of the saved header, as a hand-edit would.
-    private void EditHeader(string key, JsonNode? value)
+    // Runs one hand-edit on a saved file and writes it back.
+    private static void EditFile(string path, Action<JsonNode> edit)
     {
-        var header = JsonNode.Parse(File.ReadAllText(HeaderPath))!;
-        header[key] = value;
-        File.WriteAllText(HeaderPath, header.ToJsonString());
+        var root = JsonNode.Parse(File.ReadAllText(path))!;
+        edit(root);
+        File.WriteAllText(path, root.ToJsonString());
     }
+
+    // Changes one key of the saved header, as a hand-edit would.
+    private void EditHeader(string key, JsonNode? value) =>
+        EditFile(HeaderPath, header => header[key] = value);
 
     [Fact]
     public async Task WriteTheHeaderOfANewProfile()
@@ -263,7 +270,7 @@ public class JsonEntryStoreShould : IDisposable
         await CreateStoreAsync();
         SaveHeaderAsALaterVersion(withANewKey: false);
 
-        var refusal = await Assert.ThrowsAsync<JsonException>(
+        var refusal = await Assert.ThrowsAsync<RefusedFileException>(
             () => JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath));
 
         Assert.Equal("$.schemaVersion", refusal.Path);
@@ -278,10 +285,55 @@ public class JsonEntryStoreShould : IDisposable
         await CreateStoreAsync();
         EditHeader("encryption", encryption);
 
-        var refusal = await Assert.ThrowsAsync<JsonException>(
+        var refusal = await Assert.ThrowsAsync<RefusedFileException>(
             () => JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath));
 
         Assert.Equal("$.encryption", refusal.Path);
+    }
+
+    // One break per part of the header's check: the probe, the newer
+    // version, the strict read, and the encryption check.
+    [Theory]
+    [InlineData("schemaVersion", "0")]
+    [InlineData("schemaVersion", "99")]
+    [InlineData("colour", "\"blue\"")]
+    [InlineData("encryption", "\"aes-256-gcm\"")]
+    public async Task NameProfileJsonWhenTheHeaderIsRefused(string key, string valueJson)
+    {
+        await CreateStoreAsync();
+        EditHeader(key, JsonNode.Parse(valueJson));
+
+        var refusal = await Assert.ThrowsAsync<RefusedFileException>(
+            () => JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath));
+
+        Assert.Equal("profile.json", refusal.FileName);
+    }
+
+    [Theory]
+    [InlineData("dayLogs", "null")]
+    [InlineData("colour", "\"blue\"")]
+    public async Task NamePayloadJsonWhenThePayloadIsRefused(string key, string valueJson)
+    {
+        await CreateStoreAsync();
+        EditFile(PayloadPath, payload => payload[key] = JsonNode.Parse(valueJson));
+
+        var refusal = await Assert.ThrowsAsync<RefusedFileException>(
+            () => JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath));
+
+        Assert.Equal("payload.json", refusal.FileName);
+    }
+
+    [Fact]
+    public async Task NamePayloadJsonWhenAnEntryIsRefused()
+    {
+        var store = await CreateStoreAsync();
+        await store.AddAsync(AnEntry());
+        EditFile(PayloadPath, payload => payload["entries"]![0]!["reviewState"]!["box"] = 0);
+
+        var refusal = await Assert.ThrowsAsync<RefusedFileException>(
+            () => JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath));
+
+        Assert.Equal("payload.json", refusal.FileName);
     }
 
     [Fact]
