@@ -29,6 +29,11 @@ public sealed class JsonEntryStore : IEntryStore
     /// </summary>
     internal const int CurrentSchemaVersion = 1;
 
+    // DESIGN §7's numbers: constants, not format, so changing them changes
+    // no file.
+    private const int NewestCopiesKept = 25;
+    private const int DaysOfCopiesKept = 7;
+
     private readonly string _headerPath;
     private readonly string _payloadPath;
     private readonly TimeProvider _clock;
@@ -256,6 +261,7 @@ public sealed class JsonEntryStore : IEntryStore
         // Only after both renames, so the newest copy is always a save that
         // passed the read-back (ARCHITECTURE).
         CopyProfileFiles(_profileFolder, DataLayout.RecoveryFolderName, _clock);
+        PruneRecoveryCopies(_profileFolder);
     }
 
     // Flushed to disk before it returns, and closed by the using: the rename
@@ -323,6 +329,31 @@ public sealed class JsonEntryStore : IEntryStore
         }
 
         return copyFolder;
+    }
+
+    // Keeps the newest copies and the first of each of the latest days that
+    // have one, ordered by time and then counter (ARCHITECTURE). Only
+    // folders whose names are ours are ever deleted.
+    private static void PruneRecoveryCopies(string profileFolder)
+    {
+        var copies = Directory
+            .GetDirectories(Path.Combine(profileFolder, DataLayout.RecoveryFolderName))
+            .Select(RecoveryCopy.FromFolder)
+            .OfType<RecoveryCopy>()
+            .OrderBy(copy => copy.TakenAt)
+            .ThenBy(copy => copy.Counter)
+            .ToList();
+
+        var newest = copies.TakeLast(NewestCopiesKept);
+        var firstOfEachDay = copies
+            .GroupBy(copy => copy.TakenAt.Date)
+            .TakeLast(DaysOfCopiesKept)
+            .Select(day => day.First());
+
+        var kept = newest.Concat(firstOfEachDay).ToHashSet();
+
+        foreach (var copy in copies.Where(copy => !kept.Contains(copy)))
+            Directory.Delete(copy.Folder, recursive: true);
     }
 
     // Each file's part of the check catches whatever it refuses and names the
