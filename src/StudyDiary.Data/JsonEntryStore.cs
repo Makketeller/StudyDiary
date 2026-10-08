@@ -34,6 +34,7 @@ public sealed class JsonEntryStore : IEntryStore
     private readonly TimeProvider _clock;
     private readonly ProfileDto _header;
     private readonly PayloadDto _payload;
+    private readonly string _profileFolder;
 
     private JsonEntryStore(
         string profileFolder, TimeProvider clock, ProfileDto header, PayloadDto payload)
@@ -43,6 +44,7 @@ public sealed class JsonEntryStore : IEntryStore
         _clock = clock;
         _header = header;
         _payload = payload;
+        _profileFolder = profileFolder;
     }
 
     /// <summary>
@@ -117,8 +119,10 @@ public sealed class JsonEntryStore : IEntryStore
         }
         catch (RefusedFileException refusal)
         {
-            return new OpenOutcome.Damaged(
-                refusal.ToDamageDetail(), KeepDamagedFiles(profileFolder, clock));
+            // Kept before anything is said, so the folder in the message is
+            // real whatever the user answers (DESIGN §7).
+            var keptAt = CopyProfileFiles(profileFolder, DataLayout.DamagedFolderName, clock);
+            return new OpenOutcome.Damaged(refusal.ToDamageDetail(), keptAt);
         }
     }
 
@@ -248,6 +252,10 @@ public sealed class JsonEntryStore : IEntryStore
 
         File.Move(headerTemp, _headerPath, overwrite: true);
         File.Move(payloadTemp, _payloadPath, overwrite: true);
+
+        // Only after both renames, so the newest copy is always a save that
+        // passed the read-back (ARCHITECTURE).
+        CopyProfileFiles(_profileFolder, DataLayout.RecoveryFolderName, _clock);
     }
 
     // Flushed to disk before it returns, and closed by the using: the rename
@@ -290,29 +298,31 @@ public sealed class JsonEntryStore : IEntryStore
         }
     }
 
-    // Both files as found, byte for byte, into a new folder under damaged/
-    // named for when (DESIGN §7). A name already taken, as when one diary is
-    // opened twice in a second, gets _2, _3. Returns the folder for the message.
-    private static string KeepDamagedFiles(string profileFolder, TimeProvider clock)
+    // Both files as they are now, byte for byte, into a new folder under the
+    // profile's folderName folder, named for this moment (DESIGN §7). A name
+    // already taken, as when two copies fall in one second, gets _2, _3; a
+    // missing file is left out. Returns the new folder.
+    private static string CopyProfileFiles(
+        string profileFolder, string folderName, TimeProvider clock)
     {
-        var damagedFolder = Path.Combine(profileFolder, DataLayout.DamagedFolderName);
+        var parent = Path.Combine(profileFolder, folderName);
         var name = clock.GetLocalNow().ToString(
             DataLayout.TimestampFormat, CultureInfo.InvariantCulture);
 
-        var keptAt = Path.Combine(damagedFolder, name);
-        for (var n = 2; Directory.Exists(keptAt); n++)
-            keptAt = Path.Combine(damagedFolder, $"{name}_{n}");
+        var copyFolder = Path.Combine(parent, name);
+        for (var n = 2; Directory.Exists(copyFolder); n++)
+            copyFolder = Path.Combine(parent, $"{name}_{n}");
 
-        Directory.CreateDirectory(keptAt);
+        Directory.CreateDirectory(copyFolder);
 
         string[] files = [HeaderPath(profileFolder), PayloadPath(profileFolder)];
         foreach (var file in files)
         {
             if (File.Exists(file))
-                File.Copy(file, Path.Combine(keptAt, Path.GetFileName(file)));
+                File.Copy(file, Path.Combine(copyFolder, Path.GetFileName(file)));
         }
 
-        return keptAt;
+        return copyFolder;
     }
 
     // Each file's part of the check catches whatever it refuses and names the

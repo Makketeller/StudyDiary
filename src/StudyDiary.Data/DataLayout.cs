@@ -22,6 +22,7 @@ public static class DataLayout
     internal const string PayloadFileName = "payload.json";
     internal const string TempFileSuffix = ".tmp";
     internal const string DamagedFolderName = "damaged";
+    internal const string RecoveryFolderName = "recovery";
 
     // Folders named for a moment: sorts in time order as plain text, and no
     // colons, which Windows forbids in a name (DESIGN §7).
