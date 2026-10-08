@@ -577,14 +577,16 @@ cannot be mistaken for a damaged file.
 
 **A recovery copy is taken after every save, then older ones are pruned** (DESIGN §7). Once both
 renames are done, the two live files are copied into a new folder under `recovery/`, named by
-local time and suffixed `_2`, `_3` like `damaged/`, so the newest copy is always the last save
-that passed the read-back. A crash between the renames and the copy loses nothing: the live
-files are good, and the next save copies them. A copy's age is read from its folder name, never
-from file dates, which change when a folder is copied or backed up, and names are compared as a
-time and then a counter, since as plain text `_10` sorts before `_2`. Pruning keeps the newest
-twenty-five and the first copy of each of the seven latest days that have one, which are the
-days the app saved, and deletes nothing else: a folder in `recovery/` whose name is not one of
-ours is left alone, because the app deletes only what it can tell it made.
+local time like `damaged/`, so the newest copy is always the last save that passed the
+read-back. Copies in the same second get `_2`, `_3`, always one past the highest that second
+already has: pruning leaves gaps, and refilling one would sort the newest copy among the oldest,
+where the next prune deletes it. A crash between the renames and the copy loses nothing: the
+live files are good, and the next save copies them. A copy's age is read from its folder name,
+never from file dates, which change when a folder is copied or backed up, and names are compared
+as a time and then a counter, since as plain text `_10` sorts before `_2`. Pruning keeps the
+newest twenty-five and the first copy of each of the seven latest days that have one, which are
+the days the app saved, and deletes nothing else: a folder in `recovery/` whose name is not one
+of ours is left alone, because the app deletes only what it can tell it made.
 
 **A bug stops the app with a message, never a vanishing window.** Code that meets a bug does
 not catch it where it happens; the exception travels up to one last-resort handler in App,
