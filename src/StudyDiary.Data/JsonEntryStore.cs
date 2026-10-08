@@ -7,9 +7,11 @@
 // option) any later version. See LICENSE for details.
 
 using StudyDiary.Domain.Entries;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+
 
 namespace StudyDiary.Data;
 
@@ -81,8 +83,8 @@ public sealed class JsonEntryStore : IEntryStore
 
     /// <summary>
     /// Opens the profile in <paramref name="profileFolder"/>, reading and
-    /// checking both files. Never creates or changes anything there
-    /// (ARCHITECTURE).
+    /// checking both files. Never creates or changes either file; on damage
+    /// it keeps copies of them under <c>damaged/</c> (ARCHITECTURE).
     /// </summary>
     /// <exception cref="ArgumentException">
     /// The folder is not a full path.
@@ -96,18 +98,28 @@ public sealed class JsonEntryStore : IEntryStore
             return new OpenOutcome.NoProfile();
 
         var headerPath = HeaderPath(profileFolder);
-        var headerBytes = await File.ReadAllBytesAsync(headerPath);
-        var version = ReadSchemaVersion(headerBytes, headerPath);
 
-        // Decided before the strict read, which would call a newer file
-        // damaged, or worse, read one it misunderstands (DESIGN §7).
-        if (version > CurrentSchemaVersion)
-            return new OpenOutcome.Newer(version, CurrentSchemaVersion);
+        try
+        {
+            var headerBytes = await ReadProfileFileAsync(headerPath);
+            var version = ReadSchemaVersion(headerBytes, headerPath);
 
-        var (header, payload) = await CheckAsync(headerBytes, headerPath, PayloadPath(profileFolder));
+            // Decided before the strict read, which would call a newer file
+            // damaged, or worse, read one it misunderstands (DESIGN §7).
+            if (version > CurrentSchemaVersion)
+                return new OpenOutcome.Newer(version, CurrentSchemaVersion);
 
-        return new OpenOutcome.Opened(
-            new JsonEntryStore(profileFolder, clock, header, payload));
+            var (header, payload) =
+                await CheckAsync(headerBytes, headerPath, PayloadPath(profileFolder));
+
+            return new OpenOutcome.Opened(
+                new JsonEntryStore(profileFolder, clock, header, payload));
+        }
+        catch (RefusedFileException refusal)
+        {
+            return new OpenOutcome.Damaged(
+                refusal.ToDamageDetail(), KeepDamagedFiles(profileFolder, clock));
+        }
     }
 
     public Task<IReadOnlyList<Entry>> GetAllAsync() =>
@@ -162,7 +174,7 @@ public sealed class JsonEntryStore : IEntryStore
     internal static async Task<(ProfileDto Header, PayloadDto Payload)> ReadAndCheckAsync(
         string headerPath, string payloadPath)
     {
-        var headerBytes = await File.ReadAllBytesAsync(headerPath);
+        var headerBytes = await ReadProfileFileAsync(headerPath);
         var version = ReadSchemaVersion(headerBytes, headerPath);
 
         if (version > CurrentSchemaVersion)
@@ -257,9 +269,50 @@ public sealed class JsonEntryStore : IEntryStore
         byte[] headerBytes, string headerPath, string payloadPath)
     {
         var header = CheckHeader(headerBytes, headerPath);
-        var payload = CheckPayload(await File.ReadAllBytesAsync(payloadPath), payloadPath);
+        var payload = CheckPayload(await ReadProfileFileAsync(payloadPath), payloadPath);
 
         return (header, payload);
+    }
+
+    // A missing file is damage like any other (ARCHITECTURE), so it becomes
+    // the same refusal, named for the file, rather than a second signal.
+    private static async Task<byte[]> ReadProfileFileAsync(string filePath)
+    {
+        try
+        {
+            return await File.ReadAllBytesAsync(filePath);
+        }
+        catch (FileNotFoundException e)
+        {
+            throw new RefusedFileException(filePath, new JsonException(
+                $"{filePath} is missing.", path: null, lineNumber: null,
+                bytePositionInLine: null, innerException: e));
+        }
+    }
+
+    // Both files as found, byte for byte, into a new folder under damaged/
+    // named for when (DESIGN §7). A name already taken, as when one diary is
+    // opened twice in a second, gets _2, _3. Returns the folder for the message.
+    private static string KeepDamagedFiles(string profileFolder, TimeProvider clock)
+    {
+        var damagedFolder = Path.Combine(profileFolder, DataLayout.DamagedFolderName);
+        var name = clock.GetLocalNow().ToString(
+            DataLayout.TimestampFormat, CultureInfo.InvariantCulture);
+
+        var keptAt = Path.Combine(damagedFolder, name);
+        for (var n = 2; Directory.Exists(keptAt); n++)
+            keptAt = Path.Combine(damagedFolder, $"{name}_{n}");
+
+        Directory.CreateDirectory(keptAt);
+
+        string[] files = [HeaderPath(profileFolder), PayloadPath(profileFolder)];
+        foreach (var file in files)
+        {
+            if (File.Exists(file))
+                File.Copy(file, Path.Combine(keptAt, Path.GetFileName(file)));
+        }
+
+        return keptAt;
     }
 
     // Each file's part of the check catches whatever it refuses and names the

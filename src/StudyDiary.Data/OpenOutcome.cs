@@ -28,4 +28,11 @@ public abstract record OpenOutcome
     /// travel so the message can show them.
     /// </summary>
     public sealed record Newer(int FileSchemaVersion, int SupportedSchemaVersion) : OpenOutcome;
+
+    /// <summary>
+    /// The profile would not load. Both files were kept aside before this was
+    /// returned, so <see cref="KeptAt"/> is a real folder whatever the user
+    /// answers (DESIGN §7).
+    /// </summary>
+    public sealed record Damaged(DamageDetail Detail, string KeptAt) : OpenOutcome;
 }

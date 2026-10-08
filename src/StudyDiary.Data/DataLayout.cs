@@ -21,6 +21,11 @@ public static class DataLayout
     internal const string HeaderFileName = "profile.json";
     internal const string PayloadFileName = "payload.json";
     internal const string TempFileSuffix = ".tmp";
+    internal const string DamagedFolderName = "damaged";
+
+    // Folders named for a moment: sorts in time order as plain text, and no
+    // colons, which Windows forbids in a name (DESIGN §7).
+    internal const string TimestampFormat = "yyyy-MM-dd_HH-mm-ss";
 
     /// <summary>
     /// The default profile's folder, under the folder App resolved from
