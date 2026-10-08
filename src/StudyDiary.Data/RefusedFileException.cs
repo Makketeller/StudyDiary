@@ -22,4 +22,11 @@ internal sealed class RefusedFileException(string filePath, JsonException cause)
     // System.IO spelled out: inside a JsonException, Path is the JSON path.
     /// <summary>The refused file's name, such as <c>payload.json</c>.</summary>
     public string FileName { get; } = System.IO.Path.GetFileName(filePath);
+
+    /// <summary>
+    /// The details a damaged profile's message shows (DESIGN §7). .NET counts
+    /// lines from 0 and editors from 1, so the line moves by one here, once,
+    /// and nowhere else.
+    /// </summary>
+    public DamageDetail ToDamageDetail() => new(FileName, LineNumber + 1, Path, Message);
 }
