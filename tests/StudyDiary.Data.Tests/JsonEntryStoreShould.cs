@@ -106,6 +106,20 @@ public class JsonEntryStoreShould : IDisposable
             File.ReadAllBytes(Path.Combine(copyFolder, "payload.json")));
     }
 
+    // One more save, the given time after the last one.
+    private async Task SaveAfterAsync(IEntryStore store, TimeSpan wait)
+    {
+        _clock.Advance(wait);
+        await store.AddAsync(AnEntry());
+    }
+
+    // The names of the recovery copies left, as text in order.
+    private string[] RecoveryCopyNames() =>
+        Directory.GetDirectories(Path.Combine(_folder, "recovery"))
+            .Select(path => Path.GetFileName(path))
+            .Order()
+            .ToArray();
+
     [Fact]
     public async Task WriteTheHeaderOfANewProfile()
     {
@@ -151,6 +165,75 @@ public class JsonEntryStoreShould : IDisposable
         await store.AddAsync(AnEntry());
 
         AssertHoldsTheLiveFiles(Path.Combine(_folder, "recovery", "2026-10-06_00-30-00_2"));
+    }
+
+    // Thirty saves a minute apart after Create: the first of the day and the
+    // newest twenty-five stay, so only 00:31 to 00:35 go.
+    [Fact]
+    public async Task KeepTheNewestTwentyFiveCopiesAndTheFirstOfTheDay()
+    {
+        var store = await CreateStoreAsync();
+        for (var save = 0; save < 30; save++)
+            await SaveAfterAsync(store, TimeSpan.FromMinutes(1));
+
+        var names = RecoveryCopyNames();
+
+        Assert.Equal(26, names.Length);
+        Assert.Equal("2026-10-06_00-30-00", names[0]);
+        Assert.Equal("2026-10-06_00-36-00", names[1]);
+    }
+
+    // A copy on each of eight more days, then thirty saves on the last: the
+    // newest twenty-five all fall on that day, so earlier days survive only
+    // as the first copy of each of the last seven.
+    [Fact]
+    public async Task KeepTheFirstCopyOfEachOfTheLastSevenDays()
+    {
+        var store = await CreateStoreAsync();
+        for (var day = 0; day < 8; day++)
+            await SaveAfterAsync(store, TimeSpan.FromDays(1));
+        for (var save = 0; save < 30; save++)
+            await SaveAfterAsync(store, TimeSpan.FromMinutes(1));
+
+        var names = RecoveryCopyNames();
+
+        string[] firstOfEachDay =
+        [
+            "2026-10-08_00-30-00", "2026-10-09_00-30-00", "2026-10-10_00-30-00",
+            "2026-10-11_00-30-00", "2026-10-12_00-30-00", "2026-10-13_00-30-00",
+            "2026-10-14_00-30-00",
+        ];
+        Assert.Equal(firstOfEachDay, names[..7]);
+        Assert.Equal(32, names.Length);
+    }
+
+    // Thirty saves in one second: as plain text _10 sorts before _2, so
+    // only ordering by the counter deletes the right five.
+    [Fact]
+    public async Task OrderCopiesTakenInOneSecondByTheirCounter()
+    {
+        var store = await CreateStoreAsync();
+        for (var save = 0; save < 30; save++)
+            await SaveAfterAsync(store, TimeSpan.Zero);
+
+        var names = RecoveryCopyNames();
+
+        Assert.Equal(26, names.Length);
+        Assert.DoesNotContain("2026-10-06_00-30-00_6", names);
+        Assert.Contains("2026-10-06_00-30-00_7", names);
+    }
+
+    [Fact]
+    public async Task LeaveAFolderInRecoveryThatIsNotOneOfItsCopies()
+    {
+        var store = await CreateStoreAsync();
+        var stranger = Path.Combine(_folder, "recovery", "my notes");
+        Directory.CreateDirectory(stranger);
+
+        for (var save = 0; save < 30; save++)
+            await SaveAfterAsync(store, TimeSpan.FromMinutes(1));
+
+        Assert.True(Directory.Exists(stranger));
     }
 
     [Fact]
