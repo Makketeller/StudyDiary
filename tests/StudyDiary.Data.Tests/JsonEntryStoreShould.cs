@@ -87,6 +87,14 @@ public class JsonEntryStoreShould : IDisposable
     private void EditHeader(string key, JsonNode? value) =>
         EditFile(HeaderPath, header => header[key] = value);
 
+    // A syntax error in payload.json, as a bad hand-edit leaves it.
+    private void BreakThePayload() =>
+        File.WriteAllText(PayloadPath, """{ "entries": [, ] }""");
+
+    // Opens the folder afresh and requires the damaged outcome.
+    private async Task<OpenOutcome.Damaged> OpenDamagedAsync() =>
+        Assert.IsType<OpenOutcome.Damaged>(await JsonEntryStore.OpenAsync(_folder, _clock));
+
     [Fact]
     public async Task WriteTheHeaderOfANewProfile()
     {
@@ -340,6 +348,82 @@ public class JsonEntryStoreShould : IDisposable
             () => JsonEntryStore.ReadAndCheckAsync(HeaderPath, PayloadPath));
 
         Assert.Equal<long?>(3, refusal.ToDamageDetail().Line);
+    }
+
+    [Fact]
+    public async Task ReportDamagedNamingTheFileThatBroke()
+    {
+        await CreateStoreAsync();
+        BreakThePayload();
+
+        var damaged = await OpenDamagedAsync();
+
+        Assert.Equal("payload.json", damaged.Detail.FileName);
+    }
+
+    [Theory]
+    [InlineData("profile.json")]
+    [InlineData("payload.json")]
+    public async Task ReportDamagedNamingAMissingFile(string fileName)
+    {
+        await CreateStoreAsync();
+        File.Delete(Path.Combine(_folder, fileName));
+
+        var damaged = await OpenDamagedAsync();
+
+        Assert.Equal(fileName, damaged.Detail.FileName);
+    }
+
+
+    [Fact]
+    public async Task KeepBothFilesAsFoundWhenTheProfileIsDamaged()
+    {
+        await CreateStoreAsync();
+        BreakThePayload();
+        var header = File.ReadAllBytes(HeaderPath);
+        var payload = File.ReadAllBytes(PayloadPath);
+
+        var damaged = await OpenDamagedAsync();
+
+        Assert.Equal(header, File.ReadAllBytes(Path.Combine(damaged.KeptAt, "profile.json")));
+        Assert.Equal(payload, File.ReadAllBytes(Path.Combine(damaged.KeptAt, "payload.json")));
+    }
+
+    [Fact]
+    public async Task KeepTheDamagedFilesInAFolderNamedForWhen()
+    {
+        await CreateStoreAsync();
+        BreakThePayload();
+
+        var damaged = await OpenDamagedAsync();
+
+        Assert.Equal(Path.Combine(_folder, "damaged", "2026-10-06_00-30-00"), damaged.KeptAt);
+    }
+
+    [Fact]
+    public async Task KeepASecondOpeningOfTheSameDamageSeparately()
+    {
+        await CreateStoreAsync();
+        BreakThePayload();
+
+        var first = await OpenDamagedAsync();
+        var second = await OpenDamagedAsync();
+
+        Assert.Equal(first.KeptAt + "_2", second.KeptAt);
+    }
+
+    [Fact]
+    public async Task LeaveADamagedProfileUnchangedWhenOpening()
+    {
+        await CreateStoreAsync();
+        BreakThePayload();
+        var header = File.ReadAllBytes(HeaderPath);
+        var payload = File.ReadAllBytes(PayloadPath);
+
+        await JsonEntryStore.OpenAsync(_folder, _clock);
+
+        Assert.Equal(header, File.ReadAllBytes(HeaderPath));
+        Assert.Equal(payload, File.ReadAllBytes(PayloadPath));
     }
 
     [Fact]
