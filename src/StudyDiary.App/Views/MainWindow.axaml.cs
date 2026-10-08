@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace StudyDiary.App;
+namespace StudyDiary.App.Views;
 
 public partial class MainWindow : Window
 {
