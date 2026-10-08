@@ -95,6 +95,17 @@ public class JsonEntryStoreShould : IDisposable
     private async Task<OpenOutcome.Damaged> OpenDamagedAsync() =>
         Assert.IsType<OpenOutcome.Damaged>(await JsonEntryStore.OpenAsync(_folder, _clock));
 
+    // A copy folder must hold exactly what the live files hold now.
+    private void AssertHoldsTheLiveFiles(string copyFolder)
+    {
+        Assert.Equal(
+            File.ReadAllBytes(HeaderPath),
+            File.ReadAllBytes(Path.Combine(copyFolder, "profile.json")));
+        Assert.Equal(
+            File.ReadAllBytes(PayloadPath),
+            File.ReadAllBytes(Path.Combine(copyFolder, "payload.json")));
+    }
+
     [Fact]
     public async Task WriteTheHeaderOfANewProfile()
     {
@@ -123,6 +134,23 @@ public class JsonEntryStoreShould : IDisposable
         Assert.NotNull(payload);
         Assert.Empty(payload.Entries);
         Assert.Empty(payload.DayLogs);
+    }
+
+    [Fact]
+    public async Task TakeTheFirstRecoveryCopyWhenCreating()
+    {
+        await CreateStoreAsync();
+
+        AssertHoldsTheLiveFiles(Path.Combine(_folder, "recovery", "2026-10-06_00-30-00"));
+    }
+
+    [Fact]
+    public async Task CopyWhatEachSaveWrote()
+    {
+        var store = await CreateStoreAsync();
+        await store.AddAsync(AnEntry());
+
+        AssertHoldsTheLiveFiles(Path.Combine(_folder, "recovery", "2026-10-06_00-30-00_2"));
     }
 
     [Fact]
