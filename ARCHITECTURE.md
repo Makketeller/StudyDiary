@@ -385,6 +385,7 @@ studydiary/
         ├── profile.json
         ├── payload.json
         ├── recovery/       the app's own copies (DESIGN §7)
+        ├── damaged/        damaged files kept aside (DESIGN §7)
         └── attachments/    once images ship
 ```
 
@@ -638,9 +639,10 @@ implementation, behind a private constructor, so no half-loaded store can exist:
   because a diary lived there. Then the version is read on its own (above), the header strictly,
   and the payload strictly through the mapping. `encryption` must be `"none"`: anything else is a
   hand-edit, since a genuinely encrypted file is always written by a newer version and refused
-  first. On damage the damaged file is copied aside, then the recovery copies are tried newest
-  first through the same check until one passes, all before Open returns: the dialog cannot be
-  worded until App knows whether a copy exists. No profile here, newer and damaged are expected
+  first. On damage both files, as found, are copied into a new folder under `damaged/` named by
+  local time, a taken name getting `_2`, `_3`; then the recovery copies are tried newest first
+  through the same check until one passes, all before Open returns: the dialog cannot be worded
+  until App knows whether a copy exists. No profile here, newer and damaged are expected
   outcomes, so they come back as a result, not as exceptions.
 - **Create** writes both files and the first recovery copy, with a name App supplies, and
   refuses, as a bug, if anything of ours is already in the folder, so a first run can never

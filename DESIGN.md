@@ -314,7 +314,8 @@ exists to protect. Reopen if a real user asks, not preemptively.
 Backup must be trivial and restore must be *even easier* — an explicit MVP goal.
 
 - **The data is one folder per profile**, containing the two JSON files described below,
-  a `recovery/` folder of the app's own copies, and an `attachments/` folder once images ship.
+  a `recovery/` folder of the app's own copies, a `damaged/` folder once a damaged file has
+  been found, and an `attachments/` folder once images ship.
   Backup = copy that folder somewhere safe. The app
   helps the user find or produce it — a "reveal my
   data" action, an export action — rather than making them hunt through app-data folders.
@@ -336,6 +337,7 @@ profile.json      the header — small, plaintext forever
 payload.json      everything else — entries, review history, DayLogs
 attachments/      once images ship
 recovery/         the app's own copies — see Recovering from a damaged file
+damaged/          damaged files kept aside — see Recovering from a damaged file
 ```
 The header carries `schemaVersion`, the profile id and name, and an `encryption` field (`"none"`
 in MVP). **The payload is one self-contained blob**, which is what "encryption-ready schema"
@@ -565,7 +567,7 @@ the app keeps its own copies and offers one back.
   > Your diary couldn't be opened, so nothing has been changed. StudyDiary keeps its own
   > copies, and the most recent one is from today at 14:30. Open that copy instead?
   >
-  > The damaged file has been kept at `…`. You can look at it yourself if you want to.
+  > The damaged files has been kept at `…`. You can look at it yourself if you want to.
 
   It leads with *nothing has been changed* because that is true, and it is what someone who has
   just broken something needs to hear first. Declining changes nothing further, and
@@ -578,10 +580,16 @@ the app keeps its own copies and offers one back.
   than lose their edit to a copy. The reader's wording is shown as it
   is, not translated: it is written for developers and changes between
   .NET versions, so matching on it would break silently.
-- **The damaged file is kept, never deleted.** It is copied aside under a name that says what it
-  is *before* the question is asked, so the path in the message is real whichever answer the
-  user gives. They may have made deliberate edits worth salvaging, or know someone who can fix
-  it — the same reasoning as pre-restore copies.
+- **The damaged file is kept, never deleted.** It is copied aside *before* the question is
+  asked, so the path in the message is real whichever answer the user gives. They may have
+  made deliberate edits worth salvaging, or know someone who can fix it — the same reasoning
+  as pre-restore copies. Both files are kept as found, byte for byte, not only the one that
+  broke: restoring a copy replaces both, so a hand-edit in the healthy one would otherwise be
+  lost. They go into the profile's `damaged/` folder, one folder per time damage is found,
+  named for when (`2026-10-07_14-30-12`), and never into `recovery/`: the app may delete
+  recovery copies and never these, and separate folders make that a matter of where files
+  live. Opening the same damaged diary twice keeps it twice; the copies are small, and every
+  message points at a path that is real.
 - **If no copy loads, say so. Never fall back to an empty profile.** Opening an empty diary and
   saving it would replace years of notes with nothing: the partial-load-then-save failure in its
   purest form.
