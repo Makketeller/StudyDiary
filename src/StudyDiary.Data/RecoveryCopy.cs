@@ -25,7 +25,7 @@ public sealed record RecoveryCopy
 
     /// <summary>
     /// When it was taken, as the clock on the wall read: the name records
-    /// no offset, so none is claimed
+    /// no offset, so none is claimed.
     /// </summary>
     public DateTime TakenAt { get; }
 

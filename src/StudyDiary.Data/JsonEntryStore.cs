@@ -12,7 +12,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
-
 namespace StudyDiary.Data;
 
 /// <summary>
@@ -60,9 +59,9 @@ public sealed class JsonEntryStore : IEntryStore
     /// <exception cref="ArgumentException">
     /// The folder is not a full path.
     /// </exception>
-    /// <exception cref="InvalidOperationException">
-    /// The folder already holds a profile file. Nothing is changed.
-    /// </exception>
+      /// <exception cref="InvalidOperationException">
+      /// The folder already holds a profile file or a recovery copy. Nothing is changed.
+      /// </exception>
     public static async Task<IEntryStore> CreateAsync(
         string profileFolder, string name, TimeProvider clock)
     {
@@ -351,7 +350,7 @@ public sealed class JsonEntryStore : IEntryStore
         }
     }
 
-        // Newest first through the full check, so a copy saved by a newer build
+    // Newest first through the full check, so a copy saved by a newer build
     // is passed over like a damaged one (ARCHITECTURE). Null when none passes.
     private static async Task<RecoveryCopy?> NewestPassingCopyAsync(string profileFolder)
     {
@@ -372,14 +371,14 @@ public sealed class JsonEntryStore : IEntryStore
     }
 
     // Both files as they are now, byte for byte, into a new folder under the
-    // profile's folderName folder, named for this moment (DESIGN §7). A name
-    // already taken, as when two copies fall in one second, gets _2, _3; a
+    // profile's folderName folder, named for this moment (DESIGN §7).
+    // Copies in one second get _2, _3, as below; a
     // missing file is left out. Returns the new folder.
     private static string CopyProfileFiles(
         string profileFolder, string folderName, TimeProvider clock)
     {
         var parent = Path.Combine(profileFolder, folderName);
-                var stamp = clock.GetLocalNow().ToString(
+        var stamp = clock.GetLocalNow().ToString(
             DataLayout.TimestampFormat, CultureInfo.InvariantCulture);
 
         // One past the highest counter this second already has, never a gap
