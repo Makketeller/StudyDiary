@@ -55,14 +55,16 @@ StudyDiary.slnx
 │   └── StudyDiary.Data        IEntryStore, JSON, backup, migrations. → references Domain
 └── tests/
     ├── StudyDiary.Domain.Tests  xUnit.                            → references Domain
+    ├── StudyDiary.App.Tests     view models, never views.          → references App
     └── StudyDiary.Data.Tests    round-trips a saved profile folder. → references Data
 ```
 
 **Dependencies point inward, toward Domain, always.** Domain references nothing of ours, and
 nothing of anyone else's beyond the BCL.
 
-`StudyDiary.Data` and `StudyDiary.Data.Tests` are scaffolded in the first release, since the thin
-slice persists.
+`StudyDiary.Data` and `StudyDiary.Data.Tests`
+are scaffolded in the first release, since the thin slice persists.
+`StudyDiary.App.Tests` arrives with App's first rule.
 
 **Namespaces mirror the projects**, with `StudyDiary` as the root, and Domain is subdivided by
 concern — `StudyDiary.Domain.Scheduling` holds the ladder, the interval and the scheduler;
@@ -753,7 +755,51 @@ choose a folder and leave the store unchanged.
 
 ---
 
-## 6. Telemetry (checked 2026-07)
+## 6. App layer conventions
+
+App is the composition root and the views. Like Domain and Data it holds rules, and the
+conventions below keep those rules where the tests reach and its failures loud.
+
+**View models are plain C#.** Views live in `StudyDiary.App.Views`, view models in
+`StudyDiary.App.ViewModels`, and no file in the second names an Avalonia namespace. Fourth
+grep. A view model with nothing of Avalonia's in it can be built and checked by plain xUnit in
+`StudyDiary.App.Tests`, which is where App's own rules are tested: newest-first order, the
+session cap (DESIGN §4), refusing an entry whose title and body are both blank. Avalonia's way
+to refresh a method-bound button's enabled state needs one of its attributes, so enabled state
+is a `bool` property bound to `IsEnabled` instead.
+
+**No MVVM library.** View models implement `INotifyPropertyChanged` by hand through one small
+shared base class, lists are `ObservableCollection<T>`, and buttons bind straight to methods,
+which Avalonia supports without a command class. That leaves a library nothing to save but a
+few lines per property. Every view declares `x:DataType`: Avalonia 12 compiles bindings by
+default, so a misspelled binding fails the build instead of showing an empty box.
+
+**Only entry points are `async void`.** Avalonia calls a bound method and discards what it
+returns (checked 2026-10, in its source), so a bound method returning a `Task` discards its
+exception with it: the silent no-op §5's await rule exists to prevent. The only `async void`
+methods are UI entry points, the bound methods and the startup open, and each does nothing but
+await an `async Task` method, which is the one tests call. An `async void` method's exception
+goes to the UI thread's loop, where the last-resort handler meets it.
+
+**Nothing in App blocks on a `Task`.** No `.Wait()`, `.Result` or `.GetAwaiter().GetResult()`:
+the UI thread would wait for a continuation that can only run on the UI thread, and the app
+hangs without a window. Fifth grep.
+
+**The last-resort handler hangs off `Dispatcher.UIThread.UnhandledException`.** §5 says what
+it tells the user. Inside the event it does as little as possible, as Avalonia's source asks:
+it copies the exception, because the event's argument object is reused, marks it handled, and
+posts the message to run just after. The message replaces the window's content, so nothing left
+on screen can reach a view model that no longer matches the file, and closing the window ends
+the app. A second failure, or one before a window exists, is left unhandled and crashes: a
+handler that caught its own failure would loop forever.
+
+**Startup shows the window before the diary opens.** `OnFrameworkInitializationCompleted`
+cannot await, so it builds the window in an opening state and starts the open from a one-line
+`async void`. Avalonia installs its synchronization context before calling it (checked
+2026-10), so the open resumes on the UI thread and may change what the window shows. An open
+that throws rather than returning an outcome is a bug, and reaches the handler like any other.
+
+## 7. Telemetry (checked 2026-07)
 
 - **No telemetry ships in the app.** A compiled .NET app does not phone home; there is no runtime
   telemetry baked in. End users and their diaries are never touched. This is DESIGN §1's promise, and
