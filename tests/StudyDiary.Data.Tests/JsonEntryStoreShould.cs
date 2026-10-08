@@ -633,6 +633,64 @@ public class JsonEntryStoreShould : IDisposable
     }
 
     [Fact]
+    public async Task RestoreTheCopyOpenOffered()
+    {
+        var store = await CreateStoreAsync();
+        var entry = AnEntry();
+        await store.AddAsync(entry);
+        BreakThePayload();
+        var copy = (await OpenDamagedAsync()).NewestPassingCopy;
+        Assert.NotNull(copy);
+
+        var restored = await JsonEntryStore.RestoreAsync(_folder, copy, _clock);
+
+        Assert.Equal(entry.Id, Assert.Single(await restored.GetAllAsync()).Id);
+        Assert.Equal(entry.Id, Assert.Single(await (await ReopenAsync()).GetAllAsync()).Id);
+    }
+
+    // Create made _00, the add _2, so the restore's own save makes _3.
+    [Fact]
+    public async Task CopyTheRestoreLikeAnyOtherSave()
+    {
+        var store = await CreateStoreAsync();
+        await store.AddAsync(AnEntry());
+        BreakThePayload();
+        var copy = (await OpenDamagedAsync()).NewestPassingCopy;
+        Assert.NotNull(copy);
+
+        await JsonEntryStore.RestoreAsync(_folder, copy, _clock);
+
+        AssertHoldsTheLiveFiles(RecoveryCopyFolder("2026-10-06_00-30-00_3"));
+    }
+
+    [Fact]
+    public async Task RefuseACopyThatChangedSinceItWasOffered()
+    {
+        var store = await CreateStoreAsync();
+        await store.AddAsync(AnEntry());
+        BreakThePayload();
+        var copy = (await OpenDamagedAsync()).NewestPassingCopy;
+        Assert.NotNull(copy);
+        Break(Path.Combine(RecoveryCopyFolder("2026-10-06_00-30-00_2"), "payload.json"));
+        var payload = File.ReadAllBytes(PayloadPath);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => JsonEntryStore.RestoreAsync(_folder, copy, _clock));
+
+        Assert.Equal(payload, File.ReadAllBytes(PayloadPath));
+    }
+
+    [Fact]
+    public async Task RefuseToRestoreIntoAFolderThatIsNotAFullPath()
+    {
+        var copy = RecoveryCopy.FromFolder(RecoveryCopyFolder("2026-10-06_00-30-00"));
+        Assert.NotNull(copy);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => JsonEntryStore.RestoreAsync(Path.Combine("relative", "folder"), copy, _clock));
+    }
+
+    [Fact]
     public async Task NamePayloadJsonWhenAnEntryIsRefused()
     {
         var store = await CreateStoreAsync();
