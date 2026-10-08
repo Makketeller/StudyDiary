@@ -691,13 +691,14 @@ small piece inside Data, so the picker can read headers without opening a payloa
 abstract record with a private constructor and one sealed nested record per outcome: `Opened`
 holds the store, `NoProfile` holds nothing, `Newer` holds the file's `schemaVersion` and the
 highest this app reads, so `CurrentSchemaVersion` never leaves Data, and `Damaged` holds the
-details, where the damaged file was kept, and the newest recovery copy that passed, or none
-(DESIGN §7). An enum plus nullable fields was rejected: "the store is set only when the profile
-opened" would be a rule to remember rather than a shape, and reading it in the wrong case is a
-null at run time. App tells the cases apart with a `switch` whose default arm throws, because on
-this C# version the compiler cannot see that the cases are all there are; C# 15's `closed`
-modifier would make that check the compiler's (checked 2026-10). `Opened` holds, and Create
-returns, an `IEntryStore`, so App names the JSON implementation once, at startup.
+details, where the damaged files were kept or nothing when neither was there, and the newest
+recovery copy that passed or none (DESIGN §7). Those two nulls are answers of their own, which
+App must check before using either. An enum plus nullable fields was rejected: "the store is set
+only when the profile opened" would be a rule to remember rather than a shape, and reading it in
+the wrong case is a null at run time. App tells the cases apart with a `switch` whose default arm
+throws, because on this C# version the compiler cannot see that the cases are all there are;
+C# 15's `closed` modifier would make that check the compiler's (checked 2026-10). `Opened` holds,
+and Create returns, an `IEntryStore`, so App names the JSON implementation once, at startup.
 
 **A missing attachment is not a parse failure.** It renders as a visible placeholder in that one
 entry and changes nothing else. The entry keeps its reference, and the payload is never rewritten to

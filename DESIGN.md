@@ -590,7 +590,9 @@ the app keeps its own copies and offers one back.
   named for when (`2026-10-07_14-30-12`), and never into `recovery/`: the app may delete
   recovery copies and never these, and separate folders make that a matter of where files
   live. Opening the same damaged diary twice keeps it twice; the copies are small, and every
-  message points at a path that is real.
+  message points at a path that is real. With neither file there, as when both were deleted
+  by hand while copies remain, nothing is kept, and the message leaves that sentence out
+  rather than point at an empty folder.
 - **If no copy loads, say so. Never fall back to an empty profile.** Opening an empty diary and
   saving it would replace years of notes with nothing: the partial-load-then-save failure in its
   purest form.
