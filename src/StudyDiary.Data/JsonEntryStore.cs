@@ -18,8 +18,9 @@ namespace StudyDiary.Data;
 /// <summary>
 /// The JSON implementation of <see cref="IEntryStore"/>: one profile's
 /// folder, held whole in memory as its two DTOs and written whole on every
-/// change (ARCHITECTURE). Made only by <see cref="CreateAsync"/> or
-/// <see cref="OpenAsync"/>, so a half-loaded store cannot exist.
+/// change (ARCHITECTURE). Made only by <see cref="CreateAsync"/>,
+/// <see cref="OpenAsync"/> or <see cref="RestoreAsync"/>, so a half-loaded
+/// store cannot exist.
 /// </summary>
 public sealed class JsonEntryStore : IEntryStore
 {
@@ -134,6 +135,47 @@ public sealed class JsonEntryStore : IEntryStore
             return new OpenOutcome.Damaged(
                 refusal.ToDamageDetail(), keptAt, await NewestPassingCopyAsync(profileFolder));
         }
+    }
+
+    /// <summary>
+    /// Puts <paramref name="copy"/> back as the profile in
+    /// <paramref name="profileFolder"/> and returns its store. Called only
+    /// after the user accepts the copy Open offered: Open looks, Restore
+    /// touches (ARCHITECTURE). The copy is checked again and written through
+    /// the ordinary save, so a restore is read back and copied like any
+    /// other change.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// The folder is not a full path.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// The copy no longer passes the check. Nothing is changed.
+    /// </exception>
+    public static async Task<IEntryStore> RestoreAsync(
+        string profileFolder, RecoveryCopy copy, TimeProvider clock)
+    {
+        RequireFullPath(profileFolder);
+        ArgumentNullException.ThrowIfNull(copy);
+        ArgumentNullException.ThrowIfNull(clock);
+
+        (ProfileDto Header, PayloadDto Payload) files;
+        try
+        {
+            files = await ReadAndCheckAsync(HeaderPath(copy.Folder), PayloadPath(copy.Folder));
+        }
+        catch (RefusedFileException e)
+        {
+            // Changed under the open dialog: not damage to report, since the
+            // diary is unchanged and the next Open offers the next copy
+            // (ARCHITECTURE).
+            throw new InvalidOperationException(
+                $"The recovery copy in {copy.Folder} no longer passes the check; "
+                + "nothing was changed.", e);
+        }
+
+        var store = new JsonEntryStore(profileFolder, clock, files.Header, files.Payload);
+        await store.SaveAsync();
+        return store;
     }
 
     public Task<IReadOnlyList<Entry>> GetAllAsync() =>
