@@ -155,8 +155,9 @@ public sealed class JsonEntryStore : IEntryStore
     /// strictly, then every Entry rebuilt through the Domain (ARCHITECTURE).
     /// Open makes the same checks but answers a newer version as an outcome.
     /// </summary>
-    /// <exception cref="JsonException">
-    /// Either file is refused, including a header newer than this app reads.
+    /// <exception cref="RefusedFileException">
+    /// Either file is refused, including a header newer than this app reads;
+    /// the exception names which.
     /// </exception>
     internal static async Task<(ProfileDto Header, PayloadDto Payload)> ReadAndCheckAsync(
         string headerPath, string payloadPath)
@@ -165,10 +166,10 @@ public sealed class JsonEntryStore : IEntryStore
         var version = ReadSchemaVersion(headerBytes, headerPath);
 
         if (version > CurrentSchemaVersion)
-            throw new JsonException(
+            throw new RefusedFileException(headerPath, new JsonException(
                 $"{headerPath} has schemaVersion {version}; this app reads up to "
                 + $"{CurrentSchemaVersion}.",
-                path: "$.schemaVersion", lineNumber: null, bytePositionInLine: null);
+                path: "$.schemaVersion", lineNumber: null, bytePositionInLine: null));
 
         return await CheckAsync(headerBytes, headerPath, payloadPath);
     }
@@ -178,18 +179,27 @@ public sealed class JsonEntryStore : IEntryStore
     /// else in the file is judged, so a newer file is recognised rather than
     /// refused as damaged (ARCHITECTURE).
     /// </summary>
-    /// <exception cref="JsonException">
-    /// The version is missing, repeated, null, not an integer, or below 1.
+    /// <exception cref="RefusedFileException">
+    /// The file is not valid JSON, or its version is missing, repeated, null,
+    /// not an integer, or below 1.
     /// </exception>
     internal static int ReadSchemaVersion(byte[] headerBytes, string headerPath)
     {
-        var probe = Parse(headerBytes, headerPath, StudyDiaryJson.Context.VersionProbeDto);
+        try
+        {
+            var probe = Parse(headerBytes, headerPath, StudyDiaryJson.Context.VersionProbeDto);
 
-        return probe.SchemaVersion >= 1
-            ? probe.SchemaVersion
-            : throw new JsonException(
-                $"{headerPath} has schemaVersion {probe.SchemaVersion}; no release writes below 1.",
-                path: "$.schemaVersion", lineNumber: null, bytePositionInLine: null);
+            return probe.SchemaVersion >= 1
+                ? probe.SchemaVersion
+                : throw new JsonException(
+                    $"{headerPath} has schemaVersion {probe.SchemaVersion}; "
+                    + "no release writes below 1.",
+                    path: "$.schemaVersion", lineNumber: null, bytePositionInLine: null);
+        }
+        catch (JsonException e)
+        {
+            throw new RefusedFileException(headerPath, e);
+        }
     }
 
     // A wrong id is a bug in the caller, refused before anything changes
@@ -246,25 +256,51 @@ public sealed class JsonEntryStore : IEntryStore
     private static async Task<(ProfileDto Header, PayloadDto Payload)> CheckAsync(
         byte[] headerBytes, string headerPath, string payloadPath)
     {
-        var header = Parse(headerBytes, headerPath, StudyDiaryJson.Context.ProfileDto);
-
-        // A truly encrypted file comes from a newer version and was turned
-        // away by the probe, so anything else here is a hand-edit (ARCHITECTURE).
-        if (header.Encryption != ProfileDto.NoEncryption)
-            throw new JsonException(
-                $"{headerPath} has encryption '{header.Encryption}'; this version reads only "
-                + $"'{ProfileDto.NoEncryption}'.",
-                path: "$.encryption", lineNumber: null, bytePositionInLine: null);
-
-        var payload = await ReadAsync(payloadPath, StudyDiaryJson.Context.PayloadDto);
-        _ = EntryMapping.ToEntries(payload.Entries);
+        var header = CheckHeader(headerBytes, headerPath);
+        var payload = CheckPayload(await File.ReadAllBytesAsync(payloadPath), payloadPath);
 
         return (header, payload);
     }
 
-    private static async Task<T> ReadAsync<T>(string path, JsonTypeInfo<T> typeInfo)
-        where T : class =>
-        Parse(await File.ReadAllBytesAsync(path), path, typeInfo);
+    // Each file's part of the check catches whatever it refuses and names the
+    // file on it, so a check added inside is named without anyone remembering
+    // to (ARCHITECTURE).
+    private static ProfileDto CheckHeader(byte[] headerBytes, string headerPath)
+    {
+        try
+        {
+            var header = Parse(headerBytes, headerPath, StudyDiaryJson.Context.ProfileDto);
+
+            // A truly encrypted file comes from a newer version and was turned
+            // away by the probe, so anything else here is a hand-edit (ARCHITECTURE).
+            if (header.Encryption != ProfileDto.NoEncryption)
+                throw new JsonException(
+                    $"{headerPath} has encryption '{header.Encryption}'; this version reads only "
+                    + $"'{ProfileDto.NoEncryption}'.",
+                    path: "$.encryption", lineNumber: null, bytePositionInLine: null);
+
+            return header;
+        }
+        catch (JsonException e)
+        {
+            throw new RefusedFileException(headerPath, e);
+        }
+    }
+
+    private static PayloadDto CheckPayload(byte[] payloadBytes, string payloadPath)
+    {
+        try
+        {
+            var payload = Parse(payloadBytes, payloadPath, StudyDiaryJson.Context.PayloadDto);
+            _ = EntryMapping.ToEntries(payload.Entries);
+
+            return payload;
+        }
+        catch (JsonException e)
+        {
+            throw new RefusedFileException(payloadPath, e);
+        }
+    }
 
     // A file that is only `null` parses without complaint; it is damage.
     private static T Parse<T>(byte[] bytes, string path, JsonTypeInfo<T> typeInfo)
