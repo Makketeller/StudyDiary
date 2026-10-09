@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using StudyDiary.App.Views;
+using StudyDiary.App.ViewModels;
 
 namespace StudyDiary.App;
 
@@ -16,7 +17,8 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var window = new MainWindow();
+            var viewModel = new MainWindowViewModel();
+            var window = new MainWindow { DataContext = viewModel };
             LastResortHandler.Install(window);
             desktop.MainWindow = window;
         }

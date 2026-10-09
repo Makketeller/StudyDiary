@@ -2,8 +2,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:StudyDiary.App.ViewModels"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="StudyDiary.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
         Title="StudyDiary.App">
-    Welcome to Avalonia!
+    <ScrollViewer>
+        <StackPanel Margin="16" Spacing="12">
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsOpening}" />
+            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+        </StackPanel>
+    </ScrollViewer>
 </Window>
