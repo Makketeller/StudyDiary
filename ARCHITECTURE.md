@@ -787,6 +787,13 @@ models side by side, and any part may hold alternatives of its own the same way.
 is made only once what it needs exists, so the diary's holds its store from construction and
 never checks for one.
 
+**Questions are asked in the window, as view-model state.** A confirmation, such as deleting an
+entry or opening a recovery copy instead, is a question the view model holds until it is
+answered, shown inside the window rather than in a dialog window. Avalonia has no built-in
+message box, so a dialog would mean a second window or a library, and a question held as state
+is one the tests can ask and answer. The question holds what it is about, so the answer acts on
+exactly that.
+
 **Only entry points are `async void`.** Avalonia calls a bound method and discards what it
 returns (checked 2026-10, in its source), so a bound method returning a `Task` discards its
 exception with it: the silent no-op §5's await rule exists to prevent. The only `async void`
