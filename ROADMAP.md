@@ -86,7 +86,7 @@ tagging or mark it explicitly untested. Path handling must use `Path.Combine` th
 `LocalApplicationData` already resolves correctly per OS.
 
 *Done when:* write an entry, close, reopen tomorrow, pass it, and it returns in a week. And: delete
-a key from `payload.json` by hand, reopen, and the app offers a offers a copy instead of crashing
+a key from `payload.json` by hand, reopen, and the app offers a copy instead of crashing
 or opening empty. And: with more than ten ready, "keep going" offers more, and
 stops offering once nothing is ready.
 
