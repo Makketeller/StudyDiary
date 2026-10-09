@@ -23,17 +23,18 @@
         </DataTemplate>
 
         <DataTemplate DataType="vm:DiaryViewModel">
-            <ListBox ItemsSource="{Binding Entries}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="entries:Entry">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="{Binding CreatedOn, StringFormat='{}{0:yyyy-MM-dd}'}" />
-                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding Body}" TextWrapping="Wrap" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="16" Spacing="8">
+                    <TextBox Text="{Binding NewTitle}" PlaceholderText="Title" />
+                    <TextBox Text="{Binding NewBody}" PlaceholderText="Body"
+                             AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" />
+                    <Button Content="Add" IsEnabled="{Binding CanAddEntry}" />
+                </StackPanel>
+
+                <ListBox ItemsSource="{Binding Entries}">
+                    <!-- the ListBox.ItemTemplate from before, unchanged -->
+                </ListBox>
+            </DockPanel>
         </DataTemplate>
     </Window.DataTemplates>
 

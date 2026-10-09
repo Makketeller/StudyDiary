@@ -18,6 +18,31 @@ namespace StudyDiary.App.ViewModels;
 /// </summary>
 public sealed class DiaryViewModel : ViewModelBase
 {
+    private string _newTitle = "";
+    private string _newBody = "";
+
+    public string NewTitle
+    {
+        get => _newTitle;
+        set
+        {
+            if (SetField(ref _newTitle, value))
+                OnPropertyChanged(nameof(CanAddEntry));
+        }
+    }
+
+    public string NewBody
+    {
+        get => _newBody;
+        set
+        {
+            if (SetField(ref _newBody, value))
+                OnPropertyChanged(nameof(CanAddEntry));
+        }
+    }
+
+    public bool CanAddEntry => !Entry.IsBlank(NewTitle, NewBody);
+
     private DiaryViewModel(IEnumerable<Entry> newestFirst)
     {
         Entries = new ObservableCollection<Entry>(newestFirst);

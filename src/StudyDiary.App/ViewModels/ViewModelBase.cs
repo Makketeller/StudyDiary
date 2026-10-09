@@ -30,7 +30,14 @@ public abstract class ViewModelBase : INotifyPropertyChanged
             return false;
 
         backingField = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        OnPropertyChanged(propertyName);
         return true;
     }
+
+    /// <summary>
+    /// Raises <see cref="PropertyChanged"/> by name, for a property computed
+    /// from others that has no setter to raise it.
+    /// </summary>
+    protected void OnPropertyChanged(string propertyName) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
