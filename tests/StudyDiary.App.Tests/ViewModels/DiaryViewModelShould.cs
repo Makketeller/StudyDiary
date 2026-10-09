@@ -11,7 +11,7 @@ using StudyDiary.Domain.Entries;
 
 namespace StudyDiary.App.Tests.ViewModels;
 
-public class MainWindowViewModelShould
+public class DiaryWindowViewModelShould
 {
     [Fact]
     public async Task ListEntriesNewestFirst()
@@ -19,13 +19,12 @@ public class MainWindowViewModelShould
         var oldest = AnEntry("Oldest", new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.Zero));
         var middle = AnEntry("Middle", new DateTimeOffset(2026, 10, 2, 9, 0, 0, TimeSpan.Zero));
         var newest = AnEntry("Newest", new DateTimeOffset(2026, 10, 3, 9, 0, 0, TimeSpan.Zero));
-        var viewModel = new MainWindowViewModel();
 
-        await viewModel.ShowDiaryAsync(new InMemoryEntryStore([middle, newest, oldest]));
+        var diary = await DiaryViewModel.LoadAsync(new InMemoryEntryStore([middle, newest, oldest]));
 
         Assert.Equal(
             new[] { "Newest", "Middle", "Oldest" },
-            viewModel.Entries.Select(entry => entry.Title));
+            diary.Entries.Select(entry => entry.Title));
     }
 
     private static Entry AnEntry(string title, DateTimeOffset createdAt) =>

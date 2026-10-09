@@ -8,24 +8,34 @@
         x:Class="StudyDiary.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="StudyDiary.App">
-    <Panel>
-        <ScrollViewer IsVisible="{Binding !IsDiaryOpen}">
+    <Window.DataTemplates>
+        <DataTemplate DataType="vm:OpeningViewModel">
             <StackPanel Margin="16" Spacing="12">
-                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsOpening}" />
-                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+                <ProgressBar IsIndeterminate="True" />
+                <TextBlock Text="Opening your diary…" />
             </StackPanel>
-        </ScrollViewer>
+        </DataTemplate>
 
-        <ListBox IsVisible="{Binding IsDiaryOpen}" ItemsSource="{Binding Entries}">
-            <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="entries:Entry">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{Binding CreatedOn, StringFormat='{}{0:yyyy-MM-dd}'}" />
-                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding Body}" TextWrapping="Wrap" />
-                    </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-    </Panel>
+        <DataTemplate DataType="vm:PlaceholderViewModel">
+            <ScrollViewer>
+                <TextBlock Margin="16" Text="{Binding Text}" TextWrapping="Wrap" />
+            </ScrollViewer>
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:DiaryViewModel">
+            <ListBox ItemsSource="{Binding Entries}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="entries:Entry">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding CreatedOn, StringFormat='{}{0:yyyy-MM-dd}'}" />
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Body}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DataTemplate>
+    </Window.DataTemplates>
+
+    <ContentControl Content="{Binding Current}" />
 </Window>
