@@ -194,14 +194,26 @@ Two distinct mechanisms, kept separate on purpose.
 - **Where "today" comes from.** The scheduler is forbidden from reading the clock, so something
   else must: exactly one seam in the App layer, a `TimeProvider` resolved once and passed down.
   See ARCHITECTURE.
-- **Default session cap = 10.**
+- **Default session cap = 10, and it is a stopping point, not a limit (DECIDED).** When a
+  session ends and something is still ready, a voluntary **"keep going"** starts another session
+  of the same size. There is no ceiling: grinding a backlog down in one sitting is the user's
+  call, and actual-date anchoring (§3) means it cannot distort spacing.
+- **Why the same size, and not 1 or 5.** The user never sees the number, so a batch of 10 does
+  not feel like 10. What it sets is how often a clean finish line is offered. One at a time
+  turns every entry into a decision. A single number for every session is simpler, and "keep
+  going" is then not a new idea, only another session straight away. It is a serving constant,
+  cheap to change, and real use should settle it rather than argument.
+- **"Done for now" is always available, and stopping is never noticed.** It sits on the review
+  screen at every point. Stopping mid-session records nothing and counts nothing; what was not
+  reached simply stays ready. A session is a finish line on offer, not a commitment that can be
+  failed — which, more than the batch size, is what keeps a large pool from overwhelming.
 - **Foot-in-the-door serving.** When the ready pool is large (you've been away), the session
   opens with a **tiny first batch (~2)**, not the whole cap. Finish it and you can pull more in
   small steps. The point is to make *starting* trivial; the hard part of study is beginning, so
-  we shrink the activation energy.
-- A voluntary "keep going" pulls further batches. (**Open:** whether the cap of 10 is a hard
-  stop or only the default stopping point — §12.)
+  we shrink the activation energy. (**Open:** how this first batch hands over to "keep going"
+  — §12.)
 - The backlog shrinks through ordinary use and is **never surfaced as a number or counter**.
+  The end of a session offers "keep going" or does not; it never says how much is left.
 - During review, an optional toggle reveals the DayLogs for **the entry's created-day** (§8)
   after you answer — not today's DayLogs.
 
@@ -738,9 +750,10 @@ undecided — if it appears below, no decision exists yet.
 - **Where does `session cap` live?** It has no home in the file format — §7's payload lists
   entries, history and DayLogs only. It is a serving concern rather than a scheduling one, so
   app-wide (a separate file) is the likely answer, but it is unwritten.
-- **Is the session cap a hard stop or a default stopping point?**
-  §4 sets a default cap of 10 and also has "keep going" pulling further batches, without
-  saying whether the cap bounds them. Pick one.
+- **How the foot-in-the-door batch hands over to "keep going".** §4 opens a large pool with a
+  tiny first batch (~2) and pulls more "in small steps", while "keep going" starts a full
+  session. Small steps after the first batch put a second number in the app; a full session
+  after it does not, but jumps from 2 to 10. Due before foot-in-the-door ships.
 - **`DayLog`'s JSON shape.** The file-level shape is settled (§7), the review-history event is
   settled (§7), and `Entry`'s is now a Data concern rather than a design one — Data owns a DTO per
   persisted type, so the shape is decided when Data is written (ARCHITECTURE). What remains is
