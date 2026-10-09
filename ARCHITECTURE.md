@@ -765,7 +765,9 @@ conventions below keep those rules where the tests reach and its failures loud.
 `StudyDiary.App.ViewModels`, and no file in the second names an Avalonia namespace. Fourth
 grep. A view model with nothing of Avalonia's in it can be built and checked by plain xUnit in
 `StudyDiary.App.Tests`, which is where App's own rules are tested: newest-first order, the
-session cap (DESIGN §4), refusing an entry whose title and body are both blank. Avalonia's way
+session cap (DESIGN §4), refusing an entry whose title and body are both blank.
+Tests hand them a small `IEntryStore` written in the test project, as Data's tests hand the
+store a clock of their own, rather than a mocking package. Avalonia's way
 to refresh a method-bound button's enabled state needs one of its attributes, so enabled state
 is a `bool` property bound to `IsEnabled` instead.
 
