@@ -22,7 +22,14 @@ internal sealed class InMemoryEntryStore(IEnumerable<Entry> entries) : IEntrySto
     public Task<IReadOnlyList<Entry>> GetAllAsync() =>
         Task.FromResult<IReadOnlyList<Entry>>([.. _entries]);
 
-    public Task AddAsync(Entry entry) => throw new NotImplementedException();
+    public Task AddAsync(Entry entry)
+    {
+        if (_entries.Exists(held => held.Id == entry.Id))
+            throw new InvalidOperationException($"Entry {entry.Id} is already held.");
+
+        _entries.Add(entry);
+        return Task.CompletedTask;
+    }
 
     public Task UpdateAsync(Entry entry) => throw new NotImplementedException();
 

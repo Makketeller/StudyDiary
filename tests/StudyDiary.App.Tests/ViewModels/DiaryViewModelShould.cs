@@ -76,6 +76,58 @@ public class DiaryWindowViewModelShould
         Assert.Contains(nameof(DiaryViewModel.CanAddEntry), announced);
     }
 
+    [Fact]
+    public async Task PutANewEntryAtTheTop()
+    {
+        var diary = await ADiary(new InMemoryEntryStore([AnEntry("Older", Now.AddDays(-1))]));
+        diary.NewTitle = "New";
+
+        await diary.AddEntryAsync();
+
+       Assert.Equal(new[] { "New", "Older" }, diary.Entries.Select(entry => entry.Title));
+    }
+
+    [Fact]
+    public async Task KeepANewEntryInTheStore()
+    {
+        var store = new InMemoryEntryStore([]);
+        var diary = await ADiary(store);
+        diary.NewTitle = "Q";
+
+        await diary.AddEntryAsync();
+
+        var kept = Assert.Single(await store.GetAllAsync());
+        Assert.Equal(diary.Entries[0].Id, kept.Id);
+    }
+
+    [Fact]
+    public async Task ClearTheBoxesOnceAnEntryIsAdded()
+    {
+        var diary = await AnEmptyDiary();
+        diary.NewTitle = "Q";
+        diary.NewBody = "A";
+
+        await diary.AddEntryAsync();
+
+        Assert.Equal("", diary.NewTitle);
+        Assert.Equal("", diary.NewBody);
+    }
+
+
+    [Fact]
+    public async Task DateANewEntryByTheLocalDay()
+    {
+        var diary = await AnEmptyDiary();
+        diary.NewTitle = "Q";
+
+        await diary.AddEntryAsync();
+
+        var entry = Assert.Single(diary.Entries);
+        Assert.Equal(new DateOnly(2026, 10, 9), entry.CreatedOn);
+        Assert.Equal(Now, entry.CreatedAt);
+        Assert.Equal(TimeSpan.FromHours(2), entry.CreatedAt.Offset);
+    }
+
     private static Entry AnEntry(string title, DateTimeOffset createdAt) =>
         Entry.Create(title, "Body", DateOnly.FromDateTime(createdAt.DateTime), createdAt);
 
