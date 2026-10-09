@@ -43,7 +43,7 @@ public sealed class Entry
         ArgumentNullException.ThrowIfNull(body);
         ArgumentNullException.ThrowIfNull(reviewState);
 
-        if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(body))
+        if (IsBlank(title, body))
             throw new ArgumentException("An entry needs a title or a body.");
 
         Id = id;
@@ -69,6 +69,13 @@ public sealed class Entry
             createdOn,
             createdAt,
             new ReviewState(1, createdOn));
+
+    /// <summary>
+    /// True when neither title nor body holds anything but whitespace: the
+    /// one entry no review shape can use (DESIGN §2).
+    /// </summary>
+    public static bool IsBlank(string title, string body) =>
+        string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(body);
 
     /// <summary>Replaces scheduling state with the scheduler's result.</summary>
     public void ApplyReview(ReviewState newState)
