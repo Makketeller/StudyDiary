@@ -18,12 +18,35 @@ namespace StudyDiary.App.ViewModels;
 /// </summary>
 public sealed class DiaryViewModel : ViewModelBase
 {
-    private string _newTitle = "";
-    private string _newBody = "";
     private readonly IEntryStore _store;
     private readonly TimeProvider _clock;
+
+    private string _newTitle = "";
+    private string _newBody = "";
     private Entry? _selectedEntry;
     private Entry? _entryToDelete;
+
+    private DiaryViewModel(IEntryStore store, TimeProvider clock, IEnumerable<Entry> newestFirst)
+    {
+        _store = store;
+        _clock = clock;
+        Entries = new ObservableCollection<Entry>(newestFirst);
+    }
+
+    public static async Task<DiaryViewModel> LoadAsync(IEntryStore store, TimeProvider clock)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(clock);
+
+        var entries = await store.GetAllAsync();
+        return new DiaryViewModel(
+            store, clock, entries.OrderByDescending(entry => entry.CreatedAt));
+    }
+
+    public ObservableCollection<Entry> Entries { get; }
+
+    // Adding an entry
+
     public string NewTitle
     {
         get => _newTitle;
@@ -44,20 +67,6 @@ public sealed class DiaryViewModel : ViewModelBase
         }
     }
 
-    public Entry? SelectedEntry
-    {
-        get => _selectedEntry;
-        set
-        {
-            if (!SetField(ref _selectedEntry, value))
-                return;
-
-            OnPropertyChanged(nameof(CanDeleteEntry));
-            EntryToDelete = null;
-        }
-    }
-
-    public ObservableCollection<Entry> Entries { get; }
     public bool CanAddEntry => !Entry.IsBlank(NewTitle, NewBody);
 
     // Bound to the Add button: it only awaits, so a failure reaches the
@@ -78,6 +87,20 @@ public sealed class DiaryViewModel : ViewModelBase
         Entries.Insert(0, entry);
     }
 
+    // Selecting and deleting an entry
+
+    public Entry? SelectedEntry
+    {
+        get => _selectedEntry;
+        set
+        {
+            if (!SetField(ref _selectedEntry, value))
+                return;
+
+            OnPropertyChanged(nameof(CanDeleteEntry));
+            EntryToDelete = null;
+        }
+    }
 
     public bool CanDeleteEntry => SelectedEntry is not null;
 
@@ -116,22 +139,5 @@ public sealed class DiaryViewModel : ViewModelBase
 
         await _store.DeleteAsync(entry.Id);
         Entries.Remove(entry);
-    }
-
-    private DiaryViewModel(IEntryStore store, TimeProvider clock, IEnumerable<Entry> newestFirst)
-    {
-        _store = store;
-        _clock = clock;
-        Entries = new ObservableCollection<Entry>(newestFirst);
-    }
-
-    public static async Task<DiaryViewModel> LoadAsync(IEntryStore store, TimeProvider clock)
-    {
-        ArgumentNullException.ThrowIfNull(store);
-        ArgumentNullException.ThrowIfNull(clock);
-
-        var entries = await store.GetAllAsync();
-        return new DiaryViewModel(
-            store, clock, entries.OrderByDescending(entry => entry.CreatedAt));
     }
 }
