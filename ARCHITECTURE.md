@@ -779,7 +779,10 @@ default, so a misspelled binding fails the build instead of showing an empty box
 returns (checked 2026-10, in its source), so a bound method returning a `Task` discards its
 exception with it: the silent no-op §5's await rule exists to prevent. The only `async void`
 methods are UI entry points, the bound methods and the startup open, and each does nothing but
-await an `async Task` method, which is the one tests call. An `async void` method's exception
+await an `async Task` method, A bound method's is on its view model, where tests call it. The
+startup open's is in App, the one place that reaches the real data folder and clock, so no
+test calls it, and it only routes: open, create on a first run, hand the result to the view
+model. An `async void` method's exception
 goes to the UI thread's loop, where the last-resort handler meets it.
 
 **Nothing in App blocks on a `Task`.** No `.Wait()`, `.Result` or `.GetAwaiter().GetResult()`:
