@@ -24,4 +24,9 @@
     <ProjectReference Include="..\..\src\StudyDiary.App\StudyDiary.App.csproj" />
   </ItemGroup>
 
+  <!-- One test clock for every test project: Data.Tests owns it and tests it. -->
+  <ItemGroup>
+    <Compile Include="..\StudyDiary.Data.Tests\ManualTimeProvider.cs" Link="ManualTimeProvider.cs" />
+  </ItemGroup>
+
 </Project>
