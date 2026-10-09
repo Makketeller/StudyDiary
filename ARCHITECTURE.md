@@ -592,7 +592,8 @@ of ours is left alone, because the app deletes only what it can tell it made.
 
 **A bug stops the app with a message, never a vanishing window.** Code that meets a bug does
 not catch it where it happens; the exception travels up to one last-resort handler in App,
-which says plainly what was not saved and that the diary file is unchanged, then closes.
+which says in plain words that the diary is safe and the last change may not have been saved
+(DESIGN §7), then closes.
 Carrying on is not offered, because memory and file no longer agree. This is what "crash"
 means everywhere in this file.
 

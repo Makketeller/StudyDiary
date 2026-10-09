@@ -570,8 +570,11 @@ the app keeps its own copies and offers one back.
   format: changing them, or letting the user choose them, changes no file.
 - **A save never replaces the file with one the app cannot read back.** Each new file is read
   back with the same check a profile faces when it opens, before it replaces the old one.
-  Failing that check is a bug in the app, not damage, so the app stops and says so in plain
-  words: the last change was not saved, and the diary file is unchanged. It does not carry on,
+  Failing that check is a bug in the app, not damage, so the app stops and says so in plain words.
+  It leads with what is safe, that everything saved
+  before is still in the diary file, then that the last change may not have been saved: one
+  message meets every bug, and not every bug interrupts a save. Below it, collapsed like the
+  details on a damaged file, sit the technical details for a bug report. It does not carry on,
   because what it holds in memory no longer matches the file. A bug that writes an unreadable
   file then costs one change, not everything since it started. The check proves the file
   readable, not right; the older copies are for that.
