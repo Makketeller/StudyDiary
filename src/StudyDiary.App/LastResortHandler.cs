@@ -6,10 +6,10 @@ using Avalonia.Threading;
 namespace StudyDiary.App;
 
 /// <summary>
-/// Where every bug ends up (ARCHITECTURE): one plain message that the last
-/// change was not saved and the diary file is unchanged, then the app
-/// closes. Installed only once the window exists, so a bug before that
-/// crashes outright.
+/// Where every bug ends up (ARCHITECTURE): one plain message that the
+/// diary is safe and the last change may not have been saved, then the
+/// app closes. Installed only once the window exists, so a bug before
+/// that crashes outright.
 /// </summary>
 internal sealed class LastResortHandler
 {
