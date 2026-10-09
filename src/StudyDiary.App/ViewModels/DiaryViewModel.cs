@@ -20,7 +20,8 @@ public sealed class DiaryViewModel : ViewModelBase
 {
     private string _newTitle = "";
     private string _newBody = "";
-
+    private readonly IEntryStore _store;
+    private readonly TimeProvider _clock;
     public string NewTitle
     {
         get => _newTitle;
@@ -41,20 +42,41 @@ public sealed class DiaryViewModel : ViewModelBase
         }
     }
 
+    public ObservableCollection<Entry> Entries { get; }
     public bool CanAddEntry => !Entry.IsBlank(NewTitle, NewBody);
 
-    private DiaryViewModel(IEnumerable<Entry> newestFirst)
+    // Bound to the Add button: it only awaits, so a failure reaches the
+    // last-resort handler (ARCHITECTURE).
+    public async void AddEntry() => await AddEntryAsync();
+
+    public async Task AddEntryAsync()
     {
+        var now = _clock.GetLocalNow();
+        var entry = Entry.Create(NewTitle, NewBody, DateOnly.FromDateTime(now.DateTime), now);
+
+        // Cleared before the save, so the button disables at once and a
+        // double click cannot add the same entry twice.
+        NewTitle = "";
+        NewBody = "";
+
+        await _store.AddAsync(entry);
+        Entries.Insert(0, entry);
+    }
+
+    private DiaryViewModel(IEntryStore store, TimeProvider clock, IEnumerable<Entry> newestFirst)
+    {
+        _store = store;
+        _clock = clock;
         Entries = new ObservableCollection<Entry>(newestFirst);
     }
 
-    public ObservableCollection<Entry> Entries { get; }
-
-    public static async Task<DiaryViewModel> LoadAsync(IEntryStore store)
+    public static async Task<DiaryViewModel> LoadAsync(IEntryStore store, TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(clock);
 
         var entries = await store.GetAllAsync();
-        return new DiaryViewModel(entries.OrderByDescending(entry => entry.CreatedAt));
+        return new DiaryViewModel(
+            store, clock, entries.OrderByDescending(entry => entry.CreatedAt));
     }
 }

@@ -8,11 +8,16 @@
 
 using StudyDiary.App.ViewModels;
 using StudyDiary.Domain.Entries;
+using StudyDiary.Data.Tests;
 
 namespace StudyDiary.App.Tests.ViewModels;
 
 public class DiaryWindowViewModelShould
 {
+    // 00:30 at +02:00: still the 8th in UTC, so a day taken from UTC is wrong.
+    private static readonly DateTimeOffset Now = new(2026, 10, 9, 0, 30, 0, TimeSpan.FromHours(2));
+
+
     [Fact]
     public async Task ListEntriesNewestFirst()
     {
@@ -20,7 +25,7 @@ public class DiaryWindowViewModelShould
         var middle = AnEntry("Middle", new DateTimeOffset(2026, 10, 2, 9, 0, 0, TimeSpan.Zero));
         var newest = AnEntry("Newest", new DateTimeOffset(2026, 10, 3, 9, 0, 0, TimeSpan.Zero));
 
-        var diary = await DiaryViewModel.LoadAsync(new InMemoryEntryStore([middle, newest, oldest]));
+        var diary = await ADiary(new InMemoryEntryStore([middle, newest, oldest]));
 
         Assert.Equal(
             new[] { "Newest", "Middle", "Oldest" },
@@ -74,6 +79,8 @@ public class DiaryWindowViewModelShould
     private static Entry AnEntry(string title, DateTimeOffset createdAt) =>
         Entry.Create(title, "Body", DateOnly.FromDateTime(createdAt.DateTime), createdAt);
 
-    private static Task<DiaryViewModel> AnEmptyDiary() =>
-        DiaryViewModel.LoadAsync(new InMemoryEntryStore([]));
+    private static Task<DiaryViewModel> ADiary(InMemoryEntryStore store) =>
+        DiaryViewModel.LoadAsync(store, new ManualTimeProvider(Now));
+
+    private static Task<DiaryViewModel> AnEmptyDiary() => ADiary(new InMemoryEntryStore([]));
 }

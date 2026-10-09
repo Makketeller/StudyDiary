@@ -28,7 +28,7 @@
                     <TextBox Text="{Binding NewTitle}" PlaceholderText="Title" />
                     <TextBox Text="{Binding NewBody}" PlaceholderText="Body"
                              AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" />
-                    <Button Content="Add" IsEnabled="{Binding CanAddEntry}" />
+                    <Button Content="Add" Command="{Binding AddEntry}" IsEnabled="{Binding CanAddEntry}" />
                 </StackPanel>
 
                 <ListBox ItemsSource="{Binding Entries}">
