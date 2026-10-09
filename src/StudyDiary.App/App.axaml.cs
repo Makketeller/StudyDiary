@@ -16,7 +16,9 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow();
+            var window = new MainWindow();
+            LastResortHandler.Install(window);
+            desktop.MainWindow = window;
         }
 
         base.OnFrameworkInitializationCompleted();
