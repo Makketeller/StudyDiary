@@ -31,7 +31,20 @@
                     <Button Content="Add" Command="{Binding AddEntry}" IsEnabled="{Binding CanAddEntry}" />
                 </StackPanel>
 
-                <ListBox ItemsSource="{Binding Entries}">
+                <StackPanel DockPanel.Dock="Bottom" Margin="16" Spacing="8">
+                    <Button Content="Delete" Command="{Binding AskToDeleteEntry}"
+                            IsEnabled="{Binding CanDeleteEntry}"
+                            IsVisible="{Binding !IsConfirmingDelete}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                IsVisible="{Binding IsConfirmingDelete}">
+                        <TextBlock Text="Delete this entry? This can't be undone."
+                                   VerticalAlignment="Center" />
+                        <Button Content="Delete" Command="{Binding DeleteEntry}" />
+                        <Button Content="Cancel" Command="{Binding CancelDelete}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <ListBox ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}">
                     <!-- the ListBox.ItemTemplate from before, unchanged -->
                 </ListBox>
             </DockPanel>

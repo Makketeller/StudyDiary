@@ -22,6 +22,8 @@ public sealed class DiaryViewModel : ViewModelBase
     private string _newBody = "";
     private readonly IEntryStore _store;
     private readonly TimeProvider _clock;
+    private Entry? _selectedEntry;
+    private Entry? _entryToDelete;
     public string NewTitle
     {
         get => _newTitle;
@@ -39,6 +41,19 @@ public sealed class DiaryViewModel : ViewModelBase
         {
             if (SetField(ref _newBody, value))
                 OnPropertyChanged(nameof(CanAddEntry));
+        }
+    }
+
+    public Entry? SelectedEntry
+    {
+        get => _selectedEntry;
+        set
+        {
+            if (!SetField(ref _selectedEntry, value))
+                return;
+
+            OnPropertyChanged(nameof(CanDeleteEntry));
+            EntryToDelete = null;
         }
     }
 
@@ -61,6 +76,46 @@ public sealed class DiaryViewModel : ViewModelBase
 
         await _store.AddAsync(entry);
         Entries.Insert(0, entry);
+    }
+
+
+    public bool CanDeleteEntry => SelectedEntry is not null;
+
+    /// <summary>
+    /// The entry the delete question is about, or null when none is asked:
+    /// the answer deletes exactly this one (ARCHITECTURE).
+    /// </summary>
+    public Entry? EntryToDelete
+    {
+        get => _entryToDelete;
+        private set
+        {
+            if (SetField(ref _entryToDelete, value))
+                OnPropertyChanged(nameof(IsConfirmingDelete));
+        }
+    }
+
+    public bool IsConfirmingDelete => EntryToDelete is not null;
+
+    public void AskToDeleteEntry() => EntryToDelete = SelectedEntry;
+
+    public void CancelDelete() => EntryToDelete = null;
+
+    // Bound to the question's Delete button: it only awaits (ARCHITECTURE).
+    public async void DeleteEntry() => await DeleteEntryAsync();
+
+    public async Task DeleteEntryAsync()
+    {
+        var entry = EntryToDelete
+            ?? throw new InvalidOperationException("No entry is waiting to be deleted.");
+
+        // Cleared before the save, like adding: a double click finds no
+        // question left to answer.
+        EntryToDelete = null;
+        SelectedEntry = null;
+
+        await _store.DeleteAsync(entry.Id);
+        Entries.Remove(entry);
     }
 
     private DiaryViewModel(IEntryStore store, TimeProvider clock, IEnumerable<Entry> newestFirst)
