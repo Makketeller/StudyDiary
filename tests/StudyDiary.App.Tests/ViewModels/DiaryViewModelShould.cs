@@ -27,6 +27,53 @@ public class DiaryWindowViewModelShould
             diary.Entries.Select(entry => entry.Title));
     }
 
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("   ", "   ")]
+    [InlineData("", "   ")]
+    [InlineData("   ", "")]
+    public async Task RefuseToAddAnEntryWithNeitherTitleNorBody(string title, string body)
+    {
+        var diary = await AnEmptyDiary();
+
+        diary.NewTitle = title;
+        diary.NewBody = body;
+
+        Assert.False(diary.CanAddEntry);
+    }
+
+    [Theory]
+    [InlineData("Q", "")]
+    [InlineData("", "A")]
+    [InlineData("Q", "A")]
+    public async Task AllowAddingAnEntryWithAtLeastOneOfTitleOrBody(string title, string body)
+    {
+        var diary = await AnEmptyDiary();
+
+        diary.NewTitle = title;
+        diary.NewBody = body;
+
+        Assert.True(diary.CanAddEntry);
+    }
+
+    [Theory]
+    [InlineData("Q", "")]
+    [InlineData("", "A")]
+    public async Task AnnounceThatAddingBecamePossible(string title, string body)
+    {
+        var diary = await AnEmptyDiary();
+        var announced = new List<string?>();
+        diary.PropertyChanged += (_, e) => announced.Add(e.PropertyName);
+
+        diary.NewTitle = title;
+        diary.NewBody = body;
+
+        Assert.Contains(nameof(DiaryViewModel.CanAddEntry), announced);
+    }
+
     private static Entry AnEntry(string title, DateTimeOffset createdAt) =>
         Entry.Create(title, "Body", DateOnly.FromDateTime(createdAt.DateTime), createdAt);
+
+    private static Task<DiaryViewModel> AnEmptyDiary() =>
+        DiaryViewModel.LoadAsync(new InMemoryEntryStore([]));
 }
