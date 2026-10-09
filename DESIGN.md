@@ -312,6 +312,8 @@ exists to protect. Reopen if a real user asks, not preemptively.
   entries and schedule. Not authentication to a server; nothing leaves the machine.
 - **Video-game / Netflix model.** Pick a profile like choosing a save slot — no login friction.
   A **default profile** exists so a solo user never has to create or think about one.
+- **The first run creates the default profile without asking.** It is named `"Default"`, stored
+  in `profile.json` like any profile's name, and shown only once there is a picker.
 - Each profile owns its own data (its own Entries + Leitner state + DayLogs). Profiles do not
   see each other's entries.
 - **No passwords in MVP.** Optional local password-protection is a deferred nicety and is
