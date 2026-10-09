@@ -5,6 +5,7 @@
     <Project Path="src/StudyDiary.Domain/StudyDiary.Domain.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/StudyDiary.App.Tests/StudyDiary.App.Tests.csproj" />
     <Project Path="tests/StudyDiary.Data.Tests/StudyDiary.Data.Tests.csproj" />
     <Project Path="tests/StudyDiary.Domain.Tests/StudyDiary.Domain.Tests.csproj" />
   </Folder>
