@@ -3,14 +3,29 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:StudyDiary.App.ViewModels"
+        xmlns:entries="using:StudyDiary.Domain.Entries"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="StudyDiary.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="StudyDiary.App">
-    <ScrollViewer>
-        <StackPanel Margin="16" Spacing="12">
-            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsOpening}" />
-            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
-        </StackPanel>
-    </ScrollViewer>
+    <Panel>
+        <ScrollViewer IsVisible="{Binding !IsDiaryOpen}">
+            <StackPanel Margin="16" Spacing="12">
+                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsOpening}" />
+                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <ListBox IsVisible="{Binding IsDiaryOpen}" ItemsSource="{Binding Entries}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="entries:Entry">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{Binding CreatedOn, StringFormat='{}{0:yyyy-MM-dd}'}" />
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Body}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Panel>
 </Window>

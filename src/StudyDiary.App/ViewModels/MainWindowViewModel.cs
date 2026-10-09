@@ -6,6 +6,9 @@
 // Free Software Foundation, either version 3 of the License, or (at your
 // option) any later version. See LICENSE for details.
 
+using StudyDiary.Data;
+using StudyDiary.Domain.Entries;
+using System.Collections.ObjectModel;
 namespace StudyDiary.App.ViewModels;
 
 /// <summary>
@@ -15,6 +18,7 @@ namespace StudyDiary.App.ViewModels;
 public sealed class MainWindowViewModel : ViewModelBase
 {
     private bool _isOpening = true;
+    private bool _isDiaryOpen;
     private string _status = "Opening your diary...";
 
     public bool IsOpening
@@ -23,16 +27,31 @@ public sealed class MainWindowViewModel : ViewModelBase
         private set => SetField(ref _isOpening, value);
     }
 
+    public bool IsDiaryOpen
+    {
+        get => _isDiaryOpen;
+        private set => SetField(ref _isDiaryOpen, value);
+    }
+
     public string Status
     {
         get => _status;
         private set => SetField(ref _status, value);
     }
 
-    public void ShowDiary()
+    public ObservableCollection<Entry> Entries { get; } = new();
+
+    public async Task ShowDiaryAsync(IEntryStore store)
     {
+        ArgumentNullException.ThrowIfNull(store);
+
+        var newestFirst = (await store.GetAllAsync())
+            .OrderByDescending(entry => entry.CreatedAt);
+        foreach (var entry in newestFirst)
+            Entries.Add(entry);
+
         IsOpening = false;
-        Status = "Your diary is open.";
+        IsDiaryOpen = true;
     }
 
     // Stands in for the newer and damaged panels until they exist.

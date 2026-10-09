@@ -61,13 +61,13 @@ public partial class App : Application
 
         switch (outcome)
         {
-            case OpenOutcome.Opened:
-                viewModel.ShowDiary();
+            case OpenOutcome.Opened opened:
+                await viewModel.ShowDiaryAsync(opened.Store);
                 break;
 
             case OpenOutcome.NoProfile:
-                await JsonEntryStore.CreateAsync(profileFolder, DefaultProfileName, clock);
-                viewModel.ShowDiary();
+                var store = await JsonEntryStore.CreateAsync(profileFolder, DefaultProfileName, clock);
+                await viewModel.ShowDiaryAsync(store);
                 break;
 
             case OpenOutcome.Newer or OpenOutcome.Damaged:
