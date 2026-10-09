@@ -777,6 +777,16 @@ which Avalonia supports without a command class. That leaves a library nothing t
 few lines per property. Every view declares `x:DataType`: Avalonia 12 compiles bindings by
 default, so a misspelled binding fails the build instead of showing an empty box.
 
+**Alternatives are one property; neighbours are several.** The diary opening, the open diary
+and a file that will not open never share the window, so the main window's view model holds
+whichever is showing as one `Current` view model, and the window picks the view by type through
+its data templates. Flags such as `IsOpening` and `IsDiaryOpen` were rejected for the reason
+`OpenOutcome` is not an enum plus nullable fields (§5): "only one is true" would be a rule to
+remember. Parts that do share the window, such as a list beside an editor, are separate view
+models side by side, and any part may hold alternatives of its own the same way. A view model
+is made only once what it needs exists, so the diary's holds its store from construction and
+never checks for one.
+
 **Only entry points are `async void`.** Avalonia calls a bound method and discards what it
 returns (checked 2026-10, in its source), so a bound method returning a `Task` discards its
 exception with it: the silent no-op §5's await rule exists to prevent. The only `async void`
