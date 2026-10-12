@@ -1,0 +1,53 @@
+{
+  "entries": [
+    {
+      "id": "883b97c1-e28d-47b5-b723-670716ad48d6",
+      "title": "Bandgap of silicon at room temperature",
+      "body": "About 1.12 eV, and indirect.",
+      "createdOn": "2026-10-12",
+      "createdAt": "2026-10-12T15:36:16.2111458+02:00",
+      "reviewState": {
+        "box": 1,
+        "enteredOn": "2026-10-12"
+      },
+      "reviewHistory": []
+    },
+    {
+      "id": "0b19f402-57e8-4aea-b24a-c4751f2b1de5",
+      "title": "",
+      "body": "The Fermi level is where an electron state has a 50% chance of being occupied.",
+      "createdOn": "2026-10-12",
+      "createdAt": "2026-10-12T15:36:28.3643652+02:00",
+      "reviewState": {
+        "box": 1,
+        "enteredOn": "2026-10-12"
+      },
+      "reviewHistory": []
+    },
+    {
+      "id": "18665755-a8d6-4514-98a1-79a38cac2132",
+      "title": "Write down Maxwell's four equations.",
+      "body": "",
+      "createdOn": "2026-10-12",
+      "createdAt": "2026-10-12T15:36:39.6603272+02:00",
+      "reviewState": {
+        "box": 1,
+        "enteredOn": "2026-10-12"
+      },
+      "reviewHistory": []
+    },
+    {
+      "id": "35ff88f1-baa1-4b1f-b1d2-201f0db32422",
+      "title": "Tecken och symboler",
+      "body": "Rad ett: åäö ÅÄÖ\nRad två: ε₀ ≈ 8.854×10⁻¹² F/m\nRad tre: \uD83C\uDF89",
+      "createdOn": "2026-10-12",
+      "createdAt": "2026-10-12T15:36:58.8610132+02:00",
+      "reviewState": {
+        "box": 1,
+        "enteredOn": "2026-10-12"
+      },
+      "reviewHistory": []
+    }
+  ],
+  "dayLogs": []
+}
