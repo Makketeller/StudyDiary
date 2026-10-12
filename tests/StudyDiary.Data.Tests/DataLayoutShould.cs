@@ -23,4 +23,16 @@ public class DataLayoutShould
             Path.Combine(root, "studydiary", "profiles", "default"),
             folder);
     }
+
+    [Fact]
+    public void KeepTheDevelopmentProfileOutOfTheRealFolder()
+    {
+        var root = Path.Combine("machine", "data");
+
+        var folder = DataLayout.DevelopmentProfileFolder(root);
+
+        Assert.Equal(
+            Path.Combine(root, "studydiary-dev", "profiles", "default"),
+            folder);
+    }
 }
