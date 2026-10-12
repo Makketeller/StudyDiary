@@ -26,11 +26,11 @@
             <Panel>
                 <DockPanel IsVisible="{Binding !IsReviewing}">
                     <StackPanel DockPanel.Dock="Top" Margin="16" Spacing="8">
-                        <Button Content="Review" Command="{Binding StartReview}" />
+                        <Button Content="Review" Command="{Binding StartReview}" Classes="accent" />
                         <TextBox Text="{Binding NewTitle}" PlaceholderText="Title" />
                         <TextBox Text="{Binding NewBody}" PlaceholderText="Body"
                                  AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" />
-                        <Button Content="Add" Command="{Binding AddEntry}" IsEnabled="{Binding CanAddEntry}" />
+                         <Button Content="Add" Command="{Binding AddEntry}" IsEnabled="{Binding CanAddEntry}" Classes="accent" />
                     </StackPanel>
 
                     <StackPanel DockPanel.Dock="Bottom" Margin="16" Spacing="8">
@@ -73,7 +73,7 @@
                         <StackPanel Spacing="12" IsVisible="{Binding IsRevealed}">
                             <TextBlock Text="{Binding Answer}" TextWrapping="Wrap" />
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Content="Pass" Command="{Binding Pass}" />
+                                <Button Content="Pass" Command="{Binding Pass}" Classes="accent" />
                                 <Button Content="Fail" Command="{Binding Fail}" />
                             </StackPanel>
                         </StackPanel>
@@ -82,7 +82,7 @@
                     <StackPanel Spacing="12" IsVisible="{Binding IsSessionOver}">
                         <TextBlock Text="Nothing is ready to review right now."
                                    IsVisible="{Binding !CanKeepGoing}" />
-                        <Button Content="Keep going" Command="{Binding KeepGoing}"
+                         <Button Content="Keep going" Command="{Binding KeepGoing}" Classes="accent"
                                 IsVisible="{Binding CanKeepGoing}" />
                     </StackPanel>
 
