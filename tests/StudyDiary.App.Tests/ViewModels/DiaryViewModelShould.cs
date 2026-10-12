@@ -7,8 +7,9 @@
 // option) any later version. See LICENSE for details.
 
 using StudyDiary.App.ViewModels;
-using StudyDiary.Domain.Entries;
 using StudyDiary.Data.Tests;
+using StudyDiary.Domain.Entries;
+using StudyDiary.Domain.Scheduling;
 
 namespace StudyDiary.App.Tests.ViewModels;
 
@@ -202,7 +203,9 @@ public class DiaryWindowViewModelShould
         Entry.Create(title, "Body", DateOnly.FromDateTime(createdAt.DateTime), createdAt);
 
     private static Task<DiaryViewModel> ADiary(InMemoryEntryStore store) =>
-        DiaryViewModel.LoadAsync(store, new ManualTimeProvider(Now));
+        DiaryViewModel.LoadAsync(
+            store, new ManualTimeProvider(Now), new LeitnerScheduler(), LeitnerLadder.Default,
+            new Random(1));
 
     private static Task<DiaryViewModel> AnEmptyDiary() => ADiary(new InMemoryEntryStore([]));
 }

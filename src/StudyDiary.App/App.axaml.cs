@@ -12,8 +12,8 @@ using Avalonia.Markup.Xaml;
 using StudyDiary.App.ViewModels;
 using StudyDiary.App.Views;
 using StudyDiary.Data;
+using StudyDiary.Domain.Scheduling;
 using System.Diagnostics;
-using System.Windows.Markup;
 
 namespace StudyDiary.App;
 
@@ -62,12 +62,12 @@ public partial class App : Application
         switch (outcome)
         {
             case OpenOutcome.Opened opened:
-                viewModel.ShowDiary(await DiaryViewModel.LoadAsync(opened.Store, clock));
+                viewModel.ShowDiary(await LoadDiaryAsync(opened.Store));
                 break;
 
             case OpenOutcome.NoProfile:
-                var store = await JsonEntryStore.CreateAsync(profileFolder, DefaultProfileName, clock);
-                viewModel.ShowDiary(await DiaryViewModel.LoadAsync(store, clock));
+                var created = await JsonEntryStore.CreateAsync(profileFolder, DefaultProfileName, clock);
+                viewModel.ShowDiary(await LoadDiaryAsync(created));
                 break;
 
             case OpenOutcome.Newer or OpenOutcome.Damaged:
@@ -77,5 +77,11 @@ public partial class App : Application
             default:
                 throw new UnreachableException($"Open returned an unknown outcome: {outcome}");
         }
+
+        // The rest of the diary's world: the real scheduler, the shipped
+        // ladder, and the shared random source for serving.
+        Task<DiaryViewModel> LoadDiaryAsync(IEntryStore store) =>
+            DiaryViewModel.LoadAsync(
+                store, clock, new LeitnerScheduler(), LeitnerLadder.Default, Random.Shared);
     }
 }

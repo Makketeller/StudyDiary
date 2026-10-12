@@ -9,6 +9,7 @@
 using System.Collections.ObjectModel;
 using StudyDiary.Data;
 using StudyDiary.Domain.Entries;
+using StudyDiary.Domain.Scheduling;
 
 namespace StudyDiary.App.ViewModels;
 
@@ -20,27 +21,49 @@ public sealed class DiaryViewModel : ViewModelBase
 {
     private readonly IEntryStore _store;
     private readonly TimeProvider _clock;
+    private readonly IReviewScheduler _scheduler;
+    private readonly LeitnerLadder _ladder;
+    private readonly Random _random;
 
     private string _newTitle = "";
     private string _newBody = "";
     private Entry? _selectedEntry;
     private Entry? _entryToDelete;
+    private ReviewViewModel? _review;
 
-    private DiaryViewModel(IEntryStore store, TimeProvider clock, IEnumerable<Entry> newestFirst)
+    private DiaryViewModel(
+        IEntryStore store,
+        TimeProvider clock,
+        IReviewScheduler scheduler,
+        LeitnerLadder ladder,
+        Random random,
+        IEnumerable<Entry> newestFirst)
     {
         _store = store;
         _clock = clock;
+        _scheduler = scheduler;
+        _ladder = ladder;
+        _random = random;
         Entries = new ObservableCollection<Entry>(newestFirst);
     }
 
-    public static async Task<DiaryViewModel> LoadAsync(IEntryStore store, TimeProvider clock)
+    public static async Task<DiaryViewModel> LoadAsync(
+        IEntryStore store,
+        TimeProvider clock,
+        IReviewScheduler scheduler,
+        LeitnerLadder ladder,
+        Random random)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(scheduler);
+        ArgumentNullException.ThrowIfNull(ladder);
+        ArgumentNullException.ThrowIfNull(random);
 
         var entries = await store.GetAllAsync();
         return new DiaryViewModel(
-            store, clock, entries.OrderByDescending(entry => entry.CreatedAt));
+            store, clock, scheduler, ladder, random,
+            entries.OrderByDescending(entry => entry.CreatedAt));
     }
 
     public ObservableCollection<Entry> Entries { get; }
@@ -140,4 +163,27 @@ public sealed class DiaryViewModel : ViewModelBase
         await _store.DeleteAsync(entry.Id);
         Entries.Remove(entry);
     }
+
+    // Reviewing
+
+    /// <summary>
+    /// The review in progress, or null while browsing: the diary's own
+    /// alternatives, held as one property (ARCHITECTURE).
+    /// </summary>
+    public ReviewViewModel? Review
+    {
+        get => _review;
+        private set
+        {
+            if (SetField(ref _review, value))
+                OnPropertyChanged(nameof(IsReviewing));
+        }
+    }
+
+    public bool IsReviewing => Review is not null;
+
+    public void StartReview() =>
+        Review = new ReviewViewModel(
+            Entries, _store, _scheduler, _ladder, _clock, _random,
+            finished: () => Review = null);
 }
