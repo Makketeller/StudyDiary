@@ -25,4 +25,10 @@ public interface IReviewScheduler
 
     /// <summary> Whether this state is ready for review on the given day.</summary>
     bool IsReady(ReviewState state, DateOnly today, LeitnerLadder ladder);
+
+    /// <summary>
+    /// The day this state is next ready. Serving reads it to put the
+    /// longest-waiting entries first, and never changes it (ARCHITECTURE).
+    /// </summary>
+    DateOnly NextReviewOn(ReviewState state, LeitnerLadder ladder);
 }

@@ -28,7 +28,7 @@ public sealed class LeitnerScheduler : IReviewScheduler
                 nameof(outcome), outcome, "Unknown review outcome.")
         };
 
-        return new ReviewState(box, reviewedOn); 
+        return new ReviewState(box, reviewedOn);
     }
 
     public bool IsReady(ReviewState state, DateOnly today, LeitnerLadder ladder)
@@ -39,6 +39,11 @@ public sealed class LeitnerScheduler : IReviewScheduler
         return NextReviewOn(state, ladder) <= today;
     }
 
-    private static DateOnly NextReviewOn(ReviewState state, LeitnerLadder ladder) =>
-        ladder.IntervalForBox(state.Box).AddTo(state.EnteredOn);
+    public DateOnly NextReviewOn(ReviewState state, LeitnerLadder ladder)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(ladder);
+
+        return ladder.IntervalForBox(state.Box).AddTo(state.EnteredOn);
+    }
 }
