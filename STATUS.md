@@ -1,10 +1,10 @@
-**Last updated:** 2026-10-08 · **Version:** pre-0.1.0 · **Tests:** 207 green · **Repo:** 144   commits, public, GPLv3.
+**Last updated:** 2026-10-12 · **Version:** 0.1.0, released · **Tests:** 243 green · **Repo:** 201 commits, public, GPLv3.
 
 ## Does not exist yet
 
-- `StudyDiary.App` is the untouched Avalonia template: no clock seam, no screens, no dialogs for
-  the open outcomes, no last-resort handler.
-- Packaging for Linux and Windows.
+- Editing an entry (0.2.0), tags (0.3.0), and everything after them in ROADMAP.
+- The test that loads the 0.1.0 golden profile. The files are saved in
+  `tests/StudyDiary.Data.Tests/Golden/0.1.0/`; the test arrives with 0.4.0.
 
 ## Known defects in committed code
 
@@ -31,54 +31,50 @@ keep the wrong one of the two, and Open may offer the older. Once a year, for on
 **Restore does not check that a copy belongs to its profile.** With one profile the mistake
 cannot happen; profiles (ROADMAP) add the check.
 
+**Nothing stops two saves overlapping.** Add, delete and review move the screen on before
+saving, so a fast second action can start a save while the last is still running, and
+`JsonEntryStore` has no guard. Out of reach by mouse; keyboard review in 0.5.0 makes it likelier.
+
+**A save that fails for an outside reason meets the last-resort message** (DESIGN §7, decided
+for 0.1.0). Everything it says stays true, since the file is unchanged, but its details are
+labelled for a bug report. Separate wording is deferred (DESIGN §11).
+
 ## Decided this session
 
-The unhappy path, all of it in DESIGN §7 and ARCHITECTURE §5:
+0.1.0 built and released for Linux and Windows; Windows smoke-tested on a dual-boot install.
+The decisions are in ARCHITECTURE §5–6 and DESIGN §2, §4 and §7:
 
-- **Open reads the version on its own first** (the probe), answers `Newer` for a later file
-  carrying both format numbers, and refuses any `encryption` but `"none"`.
-- **Every refusal names its file** as a `RefusedFileException`, a missing file included, and
-  becomes the `DamageDetail` the dialog shows collapsed, its line counted from 1.
-- **Damage keeps both files as found** in `damaged/<time>/`, never deleted and not counting as
-  a diary; with neither file there, nothing is kept and the dialog drops that sentence.
-- **A recovery copy is taken after every save** into `recovery/<time>/`, aged by its name, its
-  counter one past the highest that second; pruning keeps the newest 25 and the first of each
-  of the last 7 days, and deletes nothing it cannot tell it made.
-- **Open offers the newest copy that passes the full check,** so a newer build's copy is passed
-  over; copies count as a diary living here, so Create refuses over them.
-- **Open looks, Restore touches:** Restore re-checks the copy and writes it through the
-  ordinary save.
+- **Alternatives are one property; neighbours are several.** The window holds one `Current`
+  screen, and the diary holds its review the same way.
+- **Questions are asked in the window,** as view-model state that holds what it asks about.
+- **Restore reaches the damaged screen as an offer from `App`,** so the JSON store is named only
+  in the composition root.
+- **A session serves the longest-ready half and a random half, shuffled;** `NextReviewOn` is on
+  `IReviewScheduler` for it. An untitled entry is reviewed as a Note. Review is always available.
+- **A review saves its history before the entry.**
+- **The blank-entry rule lives on `Entry.IsBlank`,** asked by the constructor and the Add button.
+- **A Debug build keeps its own data folder,** `studydiary-dev/`.
+- **An outside save failure meets the last-resort message** in 0.1.0; separate wording deferred.
+- **A provisional blue look,** every colour in `App.axaml`.
+- **App.Tests fakes the store by hand and compiles Data.Tests' clock** rather than copying it.
 
 ## Next session targets
 
-**The app for 0.1.0, aiming for about ten hours, bare and functional.** Start with a spike in
-`scratch/`: one window, one button, one list. If that runs long, re-plan before building. Then
-the entry list newest-first and adding an entry; delete with a confirm; review (ready pool,
-cap 10, reveal, pass or fail); the open outcomes as panels in the main window; the last-resort
-handler; packaging. Every rule stays below the UI, where the tests reach. Back to typing every
-line, in smaller pieces.
+**Use it.**
 
-What App needs from Data: `OpenAsync` and its four outcomes, `CreateAsync` after `NoProfile`,
-`RestoreAsync` after the user accepts a copy, the `IEntryStore` methods, and
-`InvalidOperationException` meaning a bug for the last-resort handler.
+**Then 0.2.0, edit an entry** (ROADMAP): the first live test of absent-reads-as-default, since
+0.1.0's files have no `modifiedAt`.
 
 Open, not blocking:
 
-- **Save failures from outside the app** (full disk, denied permission). DESIGN §12. Store
-  methods change memory before saving, so the answer decides whether a failed change is rolled
-  back or kept for a retry. It now includes a copy or prune failing *after* the renames: the
-  change is saved, yet the exception reaches App as though it were not.
-- **Keeping dev builds out of the real data folder.** Before tagging 0.1.0 (ROADMAP).
-
-Watch for, in the app:
-
-- `Damaged.KeptAt` and `Damaged.NewestPassingCopy` may each be null, and each null has its own
-  wording (DESIGN §7).
-- The details' line counts from 1 and the reader's message from 0; the dialog says so.
-- The `switch` over `OpenOutcome` needs a default arm that throws (ARCHITECTURE §5).
+- **The work laptop** blocks unsigned downloads outright. Asking IT to add the .NET 10 SDK to the
+  company portal, to run from source with `-c Release`. ARCHITECTURE §3 rejects code signing on
+  cost; a managed machine removing *Run anyway* entirely is a new fact if that is revisited.
 
 ## Understanding debt
 
-Steps 1–7 of the unhappy path were both typed and pasted rather than only typed, and are about half understood.
-After 0.1.0, Make sure its understood. Also,  split `JsonEntryStoreShould` (about 840 lines) by
+Steps 1–7 of the unhappy path were both typed and pasted rather than only typed, and are about
+half understood. That code ships in every binary, so it comes first. In the app, the tests from
+the damaged screen on, and any others pasted, were pasted rather than typed; tests do not ship,
+but they are what proves the rules. Also, split `JsonEntryStoreShould` (about 840 lines) by
 topic, and consider moving the four recovery-copy methods out of `JsonEntryStore`.
