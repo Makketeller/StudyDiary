@@ -91,6 +91,11 @@ three facts, and splitting it is the correct fix rather than a workaround.
 
 An entry needs a title or a body (DECIDED). The completely-empty entry is the one case every review shape rejects — a Card needs a prompt, a Note needs a body — so "at least one non-blank field" is the only content rule safe to enforce before the Card/Note axis becomes explicit. Which specific field is mandatory depends on that axis and is deferred with it; until then the constructor forbids only both-blank. Enforced there rather than in the UI because §7 expects hand-edited files and a blank entry parses as perfectly valid JSON, so the constructor is the last line of defence — the same reasoning as the Guid.Empty check.
 
+Until review shapes are explicit, review reads the entry itself: a title is a Card's prompt,
+with the body hidden until revealed, and an entry with no title is a Note, whose prompt is the
+day it was written and whose gist is recalled before the body is revealed. A title with no body
+reveals nothing; the grade is whether the title's question could be answered.
+
 Capture and browsing feel diary-like (dated entries you can flip back through). Review is
 active-recall by default, because the stated goal is to actually learn.
 
@@ -203,10 +208,20 @@ Two distinct mechanisms, kept separate on purpose.
   turns every entry into a decision. A single number for every session is simpler, and "keep
   going" is then not a new idea, only another session straight away. It is a serving constant,
   cheap to change, and real use should settle it rather than argument.
+- **Which entries a session serves (DECIDED).** Half of each session, rounded up, goes to the
+  entries that have been ready longest, so nothing waits indefinitely when sessions stop early;
+  the rest is drawn at random from what remains, so newly ready entries are not held behind a
+  backlog. The session is then shuffled, so entries written together are not served together
+  (interleaving, below). With no more ready than the cap, all of them are served, shuffled.
+  "Ready longest" is the scheduler's next-review date, earliest first. The split is a serving
+  constant like the cap, and like it is never shown.
 - **"Done for now" is always available, and stopping is never noticed.** It sits on the review
   screen at every point. Stopping mid-session records nothing and counts nothing; what was not
   reached simply stays ready. A session is a finish line on offer, not a commitment that can be
   failed — which, more than the batch size, is what keeps a large pool from overwhelming.
+- **Review is always available.** With nothing ready, the session says so in one plain sentence
+  and offers the way back. A hidden or disabled button would leave a new user wondering why on
+  their first day, before anything is ready.
 - **Foot-in-the-door serving.** When the ready pool is large (you've been away), the session
   opens with a **tiny first batch (~2)**, not the whole cap. Finish it and you can pull more in
   small steps. The point is to make *starting* trivial; the hard part of study is beginning, so
