@@ -70,8 +70,17 @@ public partial class App : Application
                 viewModel.ShowDiary(await LoadDiaryAsync(created));
                 break;
 
-            case OpenOutcome.Newer or OpenOutcome.Damaged:
-                viewModel.ShowPlaceholder(outcome.ToString());
+            case OpenOutcome.Newer newer:
+                viewModel.ShowNewer(new NewerViewModel(
+                    newer.FileSchemaVersion, newer.SupportedSchemaVersion));
+                break;
+
+            case OpenOutcome.Damaged damaged:
+                var offer = damaged.NewestPassingCopy is { } copy
+                    ? new CopyOffer(copy.TakenAt, () => OpenCopyAsync(copy))
+                    : null;
+                viewModel.ShowDamaged(new DamagedViewModel(
+                    damaged.Detail, damaged.KeptAt, offer, clock));
                 break;
 
             default:
@@ -83,5 +92,13 @@ public partial class App : Application
         Task<DiaryViewModel> LoadDiaryAsync(IEntryStore store) =>
             DiaryViewModel.LoadAsync(
                 store, clock, new LeitnerScheduler(), LeitnerLadder.Default, Random.Shared);
+
+        // Restore stays here with the other JSON-store calls; the damaged
+        // screen holds only the offer (ARCHITECTURE).
+        async Task OpenCopyAsync(RecoveryCopy copy)
+        {
+            var restored = await JsonEntryStore.RestoreAsync(profileFolder, copy, clock);
+            viewModel.ShowDiary(await LoadDiaryAsync(restored));
+        }
     }
 }

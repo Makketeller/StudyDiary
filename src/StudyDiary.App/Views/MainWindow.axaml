@@ -16,9 +16,30 @@
             </StackPanel>
         </DataTemplate>
 
-        <DataTemplate DataType="vm:PlaceholderViewModel">
+        <DataTemplate DataType="vm:NewerViewModel">
             <ScrollViewer>
-                <TextBlock Margin="16" Text="{Binding Text}" TextWrapping="Wrap" />
+                <StackPanel Margin="16" Spacing="12">
+                    <TextBlock TextWrapping="Wrap"
+                               Text="Your diary was saved by a newer version of StudyDiary, so this version won't open it, and nothing has been changed. Update StudyDiary to open it." />
+                    <Expander Header="Details">
+                        <SelectableTextBlock Text="{Binding Details}" TextWrapping="Wrap" />
+                    </Expander>
+                </StackPanel>
+            </ScrollViewer>
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:DamagedViewModel">
+            <ScrollViewer>
+                <StackPanel Margin="16" Spacing="12">
+                    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                    <Button Content="Open that copy" Command="{Binding OpenCopy}" Classes="accent"
+                            IsVisible="{Binding HasCopy}" IsEnabled="{Binding CanOpenCopy}" />
+                    <SelectableTextBlock Text="{Binding KeptAtMessage}" TextWrapping="Wrap"
+                                         IsVisible="{Binding KeptAtMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <Expander Header="Details for fixing the file by hand">
+                        <SelectableTextBlock Text="{Binding Details}" TextWrapping="Wrap" />
+                    </Expander>
+                </StackPanel>
             </ScrollViewer>
         </DataTemplate>
 
@@ -30,7 +51,7 @@
                         <TextBox Text="{Binding NewTitle}" PlaceholderText="Title" />
                         <TextBox Text="{Binding NewBody}" PlaceholderText="Body"
                                  AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" />
-                         <Button Content="Add" Command="{Binding AddEntry}" IsEnabled="{Binding CanAddEntry}" Classes="accent" />
+                        <Button Content="Add" Command="{Binding AddEntry}" IsEnabled="{Binding CanAddEntry}" Classes="accent" />
                     </StackPanel>
 
                     <StackPanel DockPanel.Dock="Bottom" Margin="16" Spacing="8">
@@ -82,7 +103,7 @@
                     <StackPanel Spacing="12" IsVisible="{Binding IsSessionOver}">
                         <TextBlock Text="Nothing is ready to review right now."
                                    IsVisible="{Binding !CanKeepGoing}" />
-                         <Button Content="Keep going" Command="{Binding KeepGoing}" Classes="accent"
+                        <Button Content="Keep going" Command="{Binding KeepGoing}" Classes="accent"
                                 IsVisible="{Binding CanKeepGoing}" />
                     </StackPanel>
 

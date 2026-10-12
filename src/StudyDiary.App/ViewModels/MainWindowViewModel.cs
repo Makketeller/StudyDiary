@@ -24,5 +24,15 @@ public sealed class MainWindowViewModel : ViewModelBase
         Current = diary;
     }
 
-    public void ShowPlaceholder(string text) => Current = new PlaceholderViewModel(text);
+    public void ShowNewer(NewerViewModel newer)
+    {
+        ArgumentNullException.ThrowIfNull(newer);
+        Current = newer;
+    }
+
+    public void ShowDamaged(DamagedViewModel damaged)
+    {
+        ArgumentNullException.ThrowIfNull(damaged);
+        Current = damaged;
+    }
 }
