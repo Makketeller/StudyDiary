@@ -762,6 +762,11 @@ moves it, a small `TimeProvider` subclass in the test project rather than a test
 store is given a profile's folder rather than the root, so profiles (DESIGN §6) add a way to
 choose a folder and leave the store unchanged.
 
+**A Debug build keeps its own data folder.** It opens `studydiary-dev/profiles/default/`, beside
+the real `studydiary/` and never inside it; a Release build opens the real one. `App` chooses
+with `#if DEBUG`, and Data owns both names. Plain `dotnet run` builds Debug, so development never
+opens the diary in daily use, while `dotnet run -c Release` and every published build do.
+
 **Migration code lives here, behind `IEntryStore`** — never in Domain (DESIGN §7).
 
 ---
