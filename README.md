@@ -32,4 +32,19 @@ This is free-time work and there will probably be hundreds of hours
 of it. Feel free to look into the .md files for a more in-depth view
 of my thinking.
 
-There is nothing to download yet. When there is, it'll be here.
+## Download
+
+Version 0.1.0 is on the [Releases page](https://github.com/Makketeller/StudyDiary/releases): one
+file per platform, with nothing to install and no admin rights needed.
+
+**Windows:** download `StudyDiary.exe` and double-click it. The file isn't signed, so Windows
+shows "Windows protected your PC" the first time: choose *More info*, then *Run anyway*. A
+computer managed by an employer or school may not offer *Run anyway* at all; that is its
+owner's policy, and only they can allow it.
+
+**Linux:** download `StudyDiary`, make it runnable with `chmod +x StudyDiary`, and start it. To
+get it in your app menu, download `studydiary.desktop` too, change its `Exec=` line to the full
+path of `StudyDiary`, and copy it to `~/.local/share/applications/`.
+
+Your diary is kept in `%LOCALAPPDATA%\studydiary` on Windows and `~/.local/share/studydiary` on
+Linux. Copy that folder and you have copied everything.
