@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=StudyDiary
+Comment=A local-first study diary with spaced-repetition review
+Exec=/path/to/StudyDiary
+Terminal=false
+Categories=Education;
