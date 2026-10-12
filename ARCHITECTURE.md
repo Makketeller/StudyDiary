@@ -335,6 +335,11 @@ rendering that as "1 week" is a UI formatting concern.
 **The scheduler sits behind an interface** (`IReviewScheduler`), testable with no UI and no files, so
 a future FSRS/SM-2 implementation is a swap rather than a rewrite (DESIGN §3, §11).
 
+**The scheduler also says when an entry is next ready** (`NextReviewOn`), so a session can
+serve the entries that have waited longest (DESIGN §4). Serving reads the date and never
+changes it, so the order cannot reach scheduling, and the swap promise holds: FSRS schedules by
+date too.
+
 **Readiness is derived, never stored.** An item is ready when its next-review date is on or before
 today (DESIGN §4). A stored `IsReady` flag would need invalidating at every midnight and would be
 wrong for exactly as long as nobody noticed. Compute it from state and a supplied date.
