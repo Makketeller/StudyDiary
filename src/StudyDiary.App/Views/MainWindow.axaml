@@ -7,7 +7,7 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="StudyDiary.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="StudyDiary.App">
+        Title="StudyDiary">
     <Window.DataTemplates>
         <DataTemplate DataType="vm:OpeningViewModel">
             <StackPanel Margin="16" Spacing="12">
