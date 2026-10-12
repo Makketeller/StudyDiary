@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>StudyDiary</AssemblyName>
+    <Version>0.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
