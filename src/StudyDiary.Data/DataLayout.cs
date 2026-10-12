@@ -18,6 +18,7 @@ namespace StudyDiary.Data;
 public static class DataLayout
 {
     internal const string AppFolderName = "studydiary";
+    internal const string DevelopmentAppFolderName = "studydiary-dev";
     internal const string ProfilesFolderName = "profiles";
     internal const string DefaultProfileFolderName = "default";
     internal const string HeaderFileName = "profile.json";
@@ -38,6 +39,18 @@ public static class DataLayout
         Path.Combine(
             localAppData,
             AppFolderName,
+            ProfilesFolderName,
+            DefaultProfileFolderName);
+
+    /// <summary>
+    /// The default profile's folder for a Debug build: beside the real one,
+    /// never inside it, so development cannot open the diary in daily use
+    /// (ARCHITECTURE).
+    /// </summary>
+    public static string DevelopmentProfileFolder(string localAppData) =>
+        Path.Combine(
+            localAppData,
+            DevelopmentAppFolderName,
             ProfilesFolderName,
             DefaultProfileFolderName);
 
