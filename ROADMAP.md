@@ -70,13 +70,6 @@ refusal with no way back is a lockout: the notes are intact and a non-technical 
 them. A copy that was never taken cannot be offered, so taking them starts with the first write,
 even though everything else about recovery waits for 0.4.0.
 
-**Open before tagging this:**
-
-- How a development build is kept out of the real data folder. Once 0.1.0 is in daily use, a
-  debug run of the next release opens the same diary.
-- What the app says when a save fails for a reason outside it — a full disk, a denied
-  permission (DESIGN §12, due before the first release).
-
 **Save a golden file when tagging,** and at every release after: one file written by that
 version, kept for the test 0.4.0 builds. Saved at the tag it costs a minute; collected later, it
 means rebuilding old tags. Like the `schemaVersion` bump from 0.2.0, it is part of cutting a
@@ -88,9 +81,9 @@ tagging or mark it explicitly untested. Path handling must use `Path.Combine` th
 `LocalApplicationData` already resolves correctly per OS.
 
 *Done when:* write an entry, close, reopen tomorrow, pass it, and it returns in a week. And: delete
-a key from `payload.json` by hand, reopen, and the app offers a copy instead of crashing
-or opening empty. And: with more than ten ready, "keep going" offers more, and
-stops offering once nothing is ready.
+a key from `payload.json` by hand, reopen, and the app offers a copy instead of crashing or
+opening empty. And: with more than ten ready, "keep going" offers more, and stops offering once
+nothing is ready.
 
 ---
 
