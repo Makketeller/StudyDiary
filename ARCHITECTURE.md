@@ -482,6 +482,11 @@ now, `AppendReviewAsync` for what happened to it. Data puts them in the same pla
 practice makes the second call and not the first, and never calls the scheduler at all — DESIGN
 §4's enforcement-by-absence, with nothing added to enforce it.
 
+**The history goes first.** A review appends its record, then updates the entry. If the app
+stops between the two, the record is true and the box has not moved, so the entry comes round
+again and earns a second record for a second review. The other order would leave a moved box
+with no record of why, and history cannot be backfilled (DESIGN §7).
+
 **An id the store does not hold is a bug in the caller, and so is an id it already holds.**
 `UpdateAsync`, `DeleteAsync` and `AppendReviewAsync` throw `KeyNotFoundException` for an entry
 the store does not hold; `AddAsync` throws `InvalidOperationException` for one it already does.
