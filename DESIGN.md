@@ -595,6 +595,12 @@ the app keeps its own copies and offers one back.
   because what it holds in memory no longer matches the file. A bug that writes an unreadable
   file then costs one change, not everything since it started. The check proves the file
   readable, not right; the older copies are for that.
+- **A save that fails for a reason outside the app meets the same message (DECIDED for 0.1.0).**
+  A full disk, a denied permission or a file held by another program is neither damage nor a
+  bug, but it leaves the file unchanged just as a failed check does, so everything the message
+  says stays true. The message says the app ran into a problem, not that it is at fault, and its
+  details carry the system's own words, such as "No space left on device", which name the cause.
+  Telling these apart from bugs needs each system's error codes, and is deferred (§11).
 - **When a profile will not load, the app offers the newest copy that does,** in plain words,
   saying when it was taken so the user knows what may be missing:
 
@@ -756,6 +762,8 @@ backlog, which shrinks by being used and is never counted at you.
 - Extra ladder steps if the retention curve wants them (trivial — the ladder is data).
 - **Chemical structure diagrams** (e.g. SMILES → 2D rendering). LaTeX/mhchem covers *notation*;
   structures are a separate rendering problem.
+- **Separate wording for a save that fails outside the app** (a full disk, a denied permission),
+  told apart from bugs by each system's error codes (§7).
 
 ---
 
@@ -801,10 +809,6 @@ undecided — if it appears below, no decision exists yet.
   holds the app's own recovery copies. Carrying them makes a backup bigger and brings old copies
   into the restored profile; leaving them out makes "the whole folder" not quite true. Nothing
   depends on it before backup ships.
-- **What does the app say when a save fails for a reason outside it?** A full disk or a denied
-  permission is neither damage nor a bug. Until this is answered it reaches the same
-  last-resort message as a bug, which is honest, since the atomic write leaves the file
-  unchanged, but it blames the app for the disk. Due before the first release.
 
 ---
 
