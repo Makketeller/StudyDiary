@@ -787,15 +787,15 @@ which Avalonia supports without a command class. That leaves a library nothing t
 few lines per property. Every view declares `x:DataType`: Avalonia 12 compiles bindings by
 default, so a misspelled binding fails the build instead of showing an empty box.
 
-**Alternatives are one property; neighbours are several.** The diary opening, the open diary
-and a file that will not open never share the window, so the main window's view model holds
-whichever is showing as one `Current` view model, and the window picks the view by type through
-its data templates. Flags such as `IsOpening` and `IsDiaryOpen` were rejected for the reason
-`OpenOutcome` is not an enum plus nullable fields (§5): "only one is true" would be a rule to
-remember. Parts that do share the window, such as a list beside an editor, are separate view
-models side by side, and any part may hold alternatives of its own the same way. A view model
-is made only once what it needs exists, so the diary's holds its store from construction and
-never checks for one.
+**Only entry points are `async void`.** Avalonia calls a bound method and discards what it
+returns (checked 2026-10, in its source), so a bound method returning a `Task` discards its
+exception with it: the silent no-op §5's await rule exists to prevent. The only `async void`
+methods are UI entry points, the bound methods and the startup open, and each does nothing but
+await an `async Task` method. A bound method's is on its view model, where tests call it. The
+startup open's is in `App`, the one place that reaches the real data folder and clock, so no
+test calls it, and it only routes: open, create on a first run, hand the result to the view
+model, and write the restore a damaged screen may offer. An `async void` method's exception
+goes to the UI thread's loop, where the last-resort handler meets it.
 
 **Questions are asked in the window, as view-model state.** A confirmation, such as deleting an
 entry or opening a recovery copy instead, is a question the view model holds until it is
@@ -803,6 +803,12 @@ answered, shown inside the window rather than in a dialog window. Avalonia has n
 message box, so a dialog would mean a second window or a library, and a question held as state
 is one the tests can ask and answer. The question holds what it is about, so the answer acts on
 exactly that.
+
+**Restore reaches the damaged screen as an offer from `App`.** The screen holds when the copy was
+taken and a function that opens it, as one value or none, so it cannot ask about a copy it has no
+way to open. The function is written in `App` beside `OpenAsync` and `CreateAsync`, so the JSON
+store is still named only in the composition root, and the screen's tests need no recovery copy,
+which only Data can make.
 
 **Only entry points are `async void`.** Avalonia calls a bound method and discards what it
 returns (checked 2026-10, in its source), so a bound method returning a `Task` discards its
