@@ -55,7 +55,13 @@ public partial class App : Application
         var localAppData = Environment.GetFolderPath(
             Environment.SpecialFolder.LocalApplicationData,
             Environment.SpecialFolderOption.Create);
+        // A Debug build keeps its own diary, so development never opens the
+        // one in daily use (ARCHITECTURE).
+#if DEBUG
+        var profileFolder = DataLayout.DevelopmentProfileFolder(localAppData);
+#else
         var profileFolder = DataLayout.DefaultProfileFolder(localAppData);
+#endif
 
         var outcome = await JsonEntryStore.OpenAsync(profileFolder, clock);
 
