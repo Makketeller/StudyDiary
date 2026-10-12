@@ -128,6 +128,76 @@ public class DiaryWindowViewModelShould
         Assert.Equal(TimeSpan.FromHours(2), entry.CreatedAt.Offset);
     }
 
+    [Fact]
+    public async Task OfferDeleteOnlyOnceAnEntryIsSelected()
+    {
+        var diary = await ADiary(new InMemoryEntryStore([AnEntry("Q", Now)]));
+        var announced = new List<string?>();
+        diary.PropertyChanged += (_, e) => announced.Add(e.PropertyName);
+        Assert.False(diary.CanDeleteEntry);
+
+        diary.SelectedEntry = diary.Entries[0];
+
+        Assert.True(diary.CanDeleteEntry);
+        Assert.Contains(nameof(DiaryViewModel.CanDeleteEntry), announced);
+    }
+
+    [Fact]
+    public async Task DeleteNothingUntilTheDeleteIsConfirmed()
+    {
+        var store = new InMemoryEntryStore([AnEntry("Q", Now)]);
+        var diary = await ADiary(store);
+        diary.SelectedEntry = diary.Entries[0];
+
+        diary.AskToDeleteEntry();
+
+        Assert.True(diary.IsConfirmingDelete);
+        Assert.Single(diary.Entries);
+        Assert.Single(await store.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task DeleteTheEntryOnceTheDeleteIsConfirmed()
+    {
+        var store = new InMemoryEntryStore([AnEntry("Q", Now)]);
+        var diary = await ADiary(store);
+        diary.SelectedEntry = diary.Entries[0];
+        diary.AskToDeleteEntry();
+
+        await diary.DeleteEntryAsync();
+
+        Assert.Empty(diary.Entries);
+        Assert.Empty(await store.GetAllAsync());
+        Assert.False(diary.IsConfirmingDelete);
+    }
+
+    [Fact]
+    public async Task KeepTheEntryWhenTheDeleteIsCancelled()
+    {
+        var store = new InMemoryEntryStore([AnEntry("Q", Now)]);
+        var diary = await ADiary(store);
+        diary.SelectedEntry = diary.Entries[0];
+        diary.AskToDeleteEntry();
+
+        diary.CancelDelete();
+
+        Assert.False(diary.IsConfirmingDelete);
+        Assert.Single(await store.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task DropTheQuestionWhenTheSelectionChanges()
+    {
+        var diary = await ADiary(new InMemoryEntryStore(
+            [AnEntry("A", Now), AnEntry("B", Now.AddDays(-1))]));
+        diary.SelectedEntry = diary.Entries[0];
+        diary.AskToDeleteEntry();
+
+        diary.SelectedEntry = diary.Entries[1];
+
+        Assert.False(diary.IsConfirmingDelete);
+    }
+
     private static Entry AnEntry(string title, DateTimeOffset createdAt) =>
         Entry.Create(title, "Body", DateOnly.FromDateTime(createdAt.DateTime), createdAt);
 

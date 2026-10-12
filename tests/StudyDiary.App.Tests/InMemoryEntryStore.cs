@@ -33,7 +33,13 @@ internal sealed class InMemoryEntryStore(IEnumerable<Entry> entries) : IEntrySto
 
     public Task UpdateAsync(Entry entry) => throw new NotImplementedException();
 
-    public Task DeleteAsync(Guid id) => throw new NotImplementedException();
+    public Task DeleteAsync(Guid id)
+    {
+        if (_entries.RemoveAll(held => held.Id == id) == 0)
+            throw new KeyNotFoundException($"Entry {id} is not held.");
+
+        return Task.CompletedTask;
+    }
 
     public Task AppendReviewAsync(Guid entryId, ReviewRecord record) =>
         throw new NotImplementedException();
