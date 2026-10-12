@@ -32,7 +32,9 @@ Add an entry (title + body, plain text), delete with confirm, browse newest-firs
 ready pool in sessions of up to 10 (reveal → pass/fail). JSON persistence in the per-user data
 folder with Guid ids and atomic writes. Self-contained single-file executables for `linux-x64`
 and `win-x64`, with a `.desktop` entry alongside the Linux binary so double-click works there
-too. No editing, no styling.
+too. No editing. One provisional look: a blue gradient and a blue accent, set once in `App.axaml`
+and following the system's light or dark setting, so the app is pleasant to use every day until
+0.5.0 lays the real foundations.
 
 **The cap is a stopping point, not a limit** (DESIGN §4). When a session ends and something is
 still ready, "keep going" starts another session of the same size, and "done for now" stops at
@@ -279,7 +281,8 @@ arrive after this, so styling every screen in detail now would mean doing much o
 
 - **One shared look, defined in one place.** Colours, fonts, sizes and spacing set once and used
   by every screen, including screens built later. A new screen should look right without being
-  styled by hand.
+  styled by hand. 0.1.0's provisional blue already lives in that place and is where this starts,
+  not something to undo.
 - **Start from Avalonia's built-in theme.** A theme library is a dependency like any other and
   has to survive the maintenance-cost rule before it is added.
 - **Review without the mouse.** Keys for starting a session, reveal, pass, fail, "keep going"
