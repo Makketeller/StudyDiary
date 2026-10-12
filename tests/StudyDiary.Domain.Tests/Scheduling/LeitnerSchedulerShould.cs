@@ -40,7 +40,7 @@ public class LeitnerSchedulerShould
 
         var advanced = _scheduler.Advance(
             state, ReviewOutcome.Pass, ReviewedOn, LeitnerLadder.Default);
-        
+
         Assert.Equal(cap, advanced.Box);
     }
 
@@ -52,10 +52,10 @@ public class LeitnerSchedulerShould
             new ReviewInterval(7, IntervalUnit.Day)
         ]);
         var state = new ReviewState(2, SomeEarlierDay);
-    
+
         var advanced = _scheduler.Advance(
             state, ReviewOutcome.Pass, ReviewedOn, twoBoxes);
-    
+
         Assert.Equal(2, advanced.Box);
     }
 
@@ -69,7 +69,7 @@ public class LeitnerSchedulerShould
 
         var advanced = _scheduler.Advance(
             state, ReviewOutcome.Fail, ReviewedOn, LeitnerLadder.Default);
-    
+
         Assert.Equal(1, advanced.Box);
     }
 
@@ -102,7 +102,7 @@ public class LeitnerSchedulerShould
     public void NotBeReadyTheDayBeforeTheIntervalElapses()
     {
         var state = new ReviewState(2, ReviewedOn); // box 2 waits 7 days
-        
+
         Assert.False(_scheduler.IsReady(
             state, ReviewedOn.AddDays(6), LeitnerLadder.Default));
     }
@@ -110,8 +110,8 @@ public class LeitnerSchedulerShould
     [Fact]
     public void BeReadyOnTheExactDayTheIntervalElapses()
     {
-        var state = new ReviewState(2, ReviewedOn); 
-        
+        var state = new ReviewState(2, ReviewedOn);
+
         Assert.True(_scheduler.IsReady(
             state, ReviewedOn.AddDays(7), LeitnerLadder.Default));
     }
@@ -119,10 +119,20 @@ public class LeitnerSchedulerShould
     [Fact]
     public void StayReadyLongAfterTheIntervalElapses()
     {
-        var state = new ReviewState(2, ReviewedOn); 
-        
+        var state = new ReviewState(2, ReviewedOn);
+
         Assert.True(_scheduler.IsReady(
             state, ReviewedOn.AddDays(400), LeitnerLadder.Default));
+    }
+
+    [Fact]
+    public void PutTheNextReviewOneBoxIntervalAfterTheDayEntered()
+    {
+        var state = new ReviewState(3, ReviewedOn); // box 3 waits 1 month
+
+        Assert.Equal(
+            new DateOnly(2026, 10, 2),
+            _scheduler.NextReviewOn(state, LeitnerLadder.Default));
     }
 
     [Fact]
@@ -142,5 +152,5 @@ public class LeitnerSchedulerShould
         Assert.False(_scheduler.IsReady(failed, ReviewedOn.AddDays(2), slowFirstBox));
         Assert.True(_scheduler.IsReady(failed, ReviewedOn.AddDays(3), slowFirstBox));
     }
-    
+
 }
